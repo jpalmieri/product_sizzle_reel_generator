@@ -75,6 +75,25 @@ export default function Home() {
   const handleGenerateStill = async (shotId: string, prompt: string) => {
     setGeneratingImages(prev => ({ ...prev, [shotId]: true }));
 
+    // Get previously generated shots for this storyboard (shots with order < current shot order)
+    const currentShot = storyboard?.shots.find(shot => shot.id === shotId);
+    const previousShots: string[] = [];
+
+    if (currentShot && storyboard) {
+      // Get all shots with lower order that have been generated
+      const previousShotIds = storyboard.shots
+        .filter(shot => shot.order < currentShot.order)
+        .sort((a, b) => a.order - b.order)
+        .map(shot => shot.id);
+
+      // Collect the image URLs of previously generated shots
+      previousShotIds.forEach(id => {
+        if (generatedImages[id]?.imageUrl) {
+          previousShots.push(generatedImages[id].imageUrl);
+        }
+      });
+    }
+
     try {
       const response = await fetch("/api/images/generate", {
         method: "POST",
@@ -85,6 +104,7 @@ export default function Home() {
           shotId,
           prompt,
           baseImage,
+          previousShots,
         }),
       });
 
@@ -189,13 +209,29 @@ export default function Home() {
                     </div>
 
                     <div className="space-y-3">
-                      <Button
-                        onClick={() => handleGenerateStill(shot.id, shot.stillPrompt)}
-                        disabled={generatingImages[shot.id]}
-                        size="sm"
-                      >
-                        {generatingImages[shot.id] ? "Generating..." : "Generate Still"}
-                      </Button>
+                      {(() => {
+                        const previousShotCount = storyboard.shots
+                          .filter(s => s.order < shot.order)
+                          .filter(s => generatedImages[s.id]?.imageUrl).length;
+                        const hasPreviousShots = previousShotCount > 0;
+
+                        return (
+                          <div className="space-y-2">
+                            <Button
+                              onClick={() => handleGenerateStill(shot.id, shot.stillPrompt)}
+                              disabled={generatingImages[shot.id]}
+                              size="sm"
+                            >
+                              {generatingImages[shot.id] ? "Generating..." : "Generate Still"}
+                            </Button>
+                            {hasPreviousShots && (
+                              <p className="text-xs text-muted-foreground">
+                                ✨ Will use {baseImage ? "base image + " : ""}{previousShotCount} previous shot{previousShotCount > 1 ? 's' : ''} for visual continuity
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {generatedImages[shot.id] && (
                         <div className="border rounded-lg p-4 bg-background">

@@ -54,19 +54,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const hasReferenceImages = body.baseImage || (body.previousShots && body.previousShots.length > 0);
+
+    let contextDescription = '';
+    if (body.baseImage && body.previousShots && body.previousShots.length > 0) {
+      contextDescription = ` Reference images provided: base character/product image plus ${body.previousShots.length} previous shot(s) for visual continuity.`;
+    } else if (body.baseImage) {
+      contextDescription = ' Reference image provided for character/product consistency.';
+    } else if (body.previousShots && body.previousShots.length > 0) {
+      contextDescription = ` ${body.previousShots.length} previous shot(s) provided for visual continuity.`;
+    }
+
     const enhancedPrompt = `Generate a professional, cinematic still image based on this description. The image should be in landscape orientation (16:9 aspect ratio) and suitable for a high-quality sizzle reel.
 
 ${body.prompt}
 
-Make this visually stunning, professional, and cinematic in quality.${body.baseImage ? ' Use the provided reference image as a base for character/product consistency.' : ''}`;
+Make this visually stunning, professional, and cinematic in quality.${contextDescription}`;
 
     const startTime = Date.now();
 
-    // Build the content array - include base image if provided
+    // Build the content array - include all reference images
     const contents: any[] = [{ text: enhancedPrompt }];
 
+    // Add base image if provided
     if (body.baseImage) {
-      // Extract mime type and base64 data from data URL
       const [mimeTypePart, base64Data] = body.baseImage.split(',');
       const mimeType = mimeTypePart.match(/data:([^;]+)/)?.[1] || DEFAULT_MIME_TYPE;
 
@@ -75,6 +86,21 @@ Make this visually stunning, professional, and cinematic in quality.${body.baseI
           mimeType,
           data: base64Data
         }
+      });
+    }
+
+    // Add previous shots if provided
+    if (body.previousShots && body.previousShots.length > 0) {
+      body.previousShots.forEach((shotImage) => {
+        const [mimeTypePart, base64Data] = shotImage.split(',');
+        const mimeType = mimeTypePart.match(/data:([^;]+)/)?.[1] || DEFAULT_MIME_TYPE;
+
+        contents.push({
+          inlineData: {
+            mimeType,
+            data: base64Data
+          }
+        });
       });
     }
 

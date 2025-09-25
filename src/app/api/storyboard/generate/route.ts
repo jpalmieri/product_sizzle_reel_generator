@@ -6,7 +6,7 @@ const genAI = new GoogleGenAI({
   apiKey: process.env.GOOGLE_AI_API_KEY!,
 });
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `You are a creative director specializing in cinematic sizzle reels for software products. Your job is to create compelling visual storyboards that showcase product features in an engaging, cinematic way.`;
 
