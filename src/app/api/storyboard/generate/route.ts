@@ -8,23 +8,29 @@ const genAI = new GoogleGenAI({
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
-const SYSTEM_PROMPT = `You are a creative director specializing in cinematic sizzle reels for software products. Your job is to create compelling visual storyboards that showcase product features in an engaging, cinematic way.`;
+const SYSTEM_PROMPT = `You are a creative director specializing in cinematic sizzle reels for the Free World app - a portal helping formerly incarcerated individuals train for and find work in the trucking industry. Create authentic, dignified stories that represent this community with respect and showcase meaningful opportunities for second chances and career growth in professional trucking.`;
 
 const generateStoryboardPrompt = (productDescription: string) => {
   return `${SYSTEM_PROMPT}
 
 Product Description: ${productDescription}
 
-Create a cinematic storyboard for a sizzle reel with 4-6 shots that would effectively showcase this product. Focus on human-centered visual storytelling that shows the character's experience and interaction with their device, emphasizing emotions, reactions, and the impact of using the product.
+Create a cinematic storyboard for a sizzle reel with 4-6 shots that tells a compelling story about formerly incarcerated individuals finding opportunity and hope through the Free World app's connection to trucking careers. Build a narrative arc that shows:
+
+1. THE CHALLENGE: The difficulty of reentry and finding meaningful work
+2. THE SOLUTION: Discovering opportunity through the Free World app
+3. THE IMPACT: Progress, hope, and tangible career advancement in trucking
+
+Focus on authentic, dignified representation in realistic settings - NOT corporate environments or expensive locations. Show modest homes, community spaces, truck stops, training facilities, and other authentic environments this community would recognize.
 
 IMPORTANT: Do NOT show device screens, UI elements, or specific app interfaces in the shots. Instead, focus on:
-- Character reactions and emotions while using the device
-- Natural device handling (typing, tapping, gesturing, holding)
-- Environmental context and settings
-- Body language that conveys the product's impact
-- Moments that show the product solving problems or creating value
+- Character emotions and reactions while using the device (hope, determination, relief, progress)
+- Natural device handling (typing, tapping, gesturing, holding, scrolling)
+- Authentic environmental context (modest settings, trucking industry elements)
+- Body language that conveys the life-changing impact of finding career opportunities
+- Moments that show the Free World app solving real reentry challenges
 
-The story should be told through human behavior and interaction, not through visible interfaces.
+The story should be told through human behavior, emotional beats, and environmental storytelling that resonates with the formerly incarcerated community and shows the dignity of second chances.
 
 Return your response as a JSON object with this exact structure:
 {
@@ -42,24 +48,41 @@ Return your response as a JSON object with this exact structure:
 }
 
 Make the still prompts extremely detailed and cinematic, focusing on:
+
+CINEMATIC PRODUCTION:
 - Landscape orientation (16:9 aspect ratio)
-- Professional lighting and composition
-- Modern, clean visual style
-- Specific camera angles and framing
-- Color palette and mood
-- Human emotions, reactions, and body language
-- Natural device interaction (without showing screens)
-- Environmental context and settings
-- Technical details that would help an AI generate a compelling image
+- Professional camera work: specific lens choices (35mm, 50mm, 85mm), camera movements (dolly, crane, handheld)
+- Advanced lighting: golden hour, blue hour, practical lighting, three-point lighting, rim lighting, dramatic shadows
+- Depth of field: shallow focus, bokeh effects, foreground/background separation
+- Composition: rule of thirds, leading lines, symmetry, negative space, framing within frame
+- Color grading: warm/cool color temperature shifts for emotional beats, cinematic color palettes
+
+VISUAL STORYTELLING:
+- Human emotions, reactions, and body language that tell the story
+- Natural device interaction (without showing screens) - typing, scrolling, gesturing, holding
+- Environmental context that supports the Free World/trucking narrative
+- Authentic settings: modest homes, community centers, truck stops, training facilities, highways
+- Technical cinematography details for AI generation: f-stop, focal length, lighting direction
 
 IMPORTANT GUIDELINES:
 - Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) - the visual appearance will be provided via reference image
 - Do NOT show device screens, UI elements, or app interfaces in the shots
-- DO focus on human-device interaction: typing, tapping, holding, gesturing
-- DO emphasize character emotions, reactions, and the impact of the product
-- DO include environmental context that supports the story
+- DO focus on human-device interaction: typing, tapping, holding, gesturing, scrolling
+- DO emphasize character emotions, reactions, and the life-changing impact of finding career opportunities
+- DO include authentic environmental context that supports the Free World/trucking story
 
-Each shot should build upon the previous one to tell a cohesive human-centered story about the product's impact.`;
+STYLE GUARDRAILS (CRITICAL):
+- Photorealistic only - no stylized, artistic, or abstract interpretations
+- Neutral Rec.709 color grading - professional broadcast standard
+- NO glam filters, Instagram-style effects, or beauty enhancement
+- NO brand logos, product placement, or corporate branding visible
+- NO lip-sync mouth shapes or exaggerated facial expressions
+- NO extra fingers, body warping, or anatomical distortions
+- NO harsh, stylized color grading or heavy post-processing effects
+- NO text overlays, subtitles, or graphics in the shots
+
+NARRATIVE ARC REQUIREMENTS:
+Each shot should build upon the previous one to tell a cohesive story about formerly incarcerated individuals finding hope and opportunity through trucking careers via the Free World app. The progression should feel authentic, dignified, and emotionally resonant while avoiding stereotypes or exploitation.`;
 };
 
 export async function POST(request: NextRequest) {
