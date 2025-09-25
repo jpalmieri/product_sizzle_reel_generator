@@ -73,6 +73,11 @@ export default function Home() {
   };
 
   const handleGenerateStill = async (shotId: string, prompt: string) => {
+    if (!baseImage) {
+      setError("Please upload a base image before generating stills");
+      return;
+    }
+
     setGeneratingImages(prev => ({ ...prev, [shotId]: true }));
 
     // Get previously generated shots for this storyboard (shots with order < current shot order)
@@ -151,9 +156,9 @@ export default function Home() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Base Image (Optional)</label>
+              <label className="text-sm font-medium">Base Image (Required)</label>
               <p className="text-xs text-muted-foreground">
-                Upload a reference image for character/product consistency across all generated stills
+                Upload a reference image of your character/product - this ensures visual consistency and prevents conflicting appearance descriptions in prompts
               </p>
               <Input
                 type="file"
@@ -219,16 +224,26 @@ export default function Home() {
                           <div className="space-y-2">
                             <Button
                               onClick={() => handleGenerateStill(shot.id, shot.stillPrompt)}
-                              disabled={generatingImages[shot.id]}
+                              disabled={generatingImages[shot.id] || !baseImage}
                               size="sm"
                             >
                               {generatingImages[shot.id] ? "Generating..." : "Generate Still"}
                             </Button>
-                            {hasPreviousShots && (
-                              <p className="text-xs text-muted-foreground">
-                                ✨ Will use {baseImage ? "base image + " : ""}{previousShotCount} previous shot{previousShotCount > 1 ? 's' : ''} for visual continuity
+                            <div className="space-y-1">
+                              <p className="text-xs text-green-600">
+                                ✅ Will use base image for character appearance
                               </p>
-                            )}
+                              {hasPreviousShots && (
+                                <p className="text-xs text-muted-foreground">
+                                  ✨ Plus {previousShotCount} previous shot{previousShotCount > 1 ? 's' : ''} for visual continuity
+                                </p>
+                              )}
+                              {!baseImage && (
+                                <p className="text-xs text-red-600">
+                                  ⚠️ Base image required before generating stills
+                                </p>
+                              )}
+                            </div>
                           </div>
                         );
                       })()}

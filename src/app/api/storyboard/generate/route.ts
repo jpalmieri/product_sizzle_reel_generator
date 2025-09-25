@@ -38,7 +38,10 @@ Make the still prompts extremely detailed and cinematic, focusing on:
 - Modern, clean visual style
 - Specific camera angles and framing
 - Color palette and mood
+- Actions, poses, and scene composition
 - Technical details that would help an AI generate a compelling image
+
+IMPORTANT: Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) in the still prompts. The visual appearance will be provided via reference image. Focus only on pose, action, camera work, lighting, and scene composition.
 
 Each shot should build upon the previous one to tell a cohesive visual story about the product.`;
 };

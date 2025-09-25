@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
   try {
     const body: StillImageGenerationRequest = await request.json();
 
-    if (!body.prompt || !body.shotId) {
+    if (!body.prompt || !body.shotId || !body.baseImage) {
       return NextResponse.json(
-        { error: "Prompt and shotId are required" },
+        { error: "Prompt, shotId, and baseImage are required" },
         { status: 400 }
       );
     }
@@ -54,16 +54,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const hasReferenceImages = body.baseImage || (body.previousShots && body.previousShots.length > 0);
-
-    let contextDescription = '';
-    if (body.baseImage && body.previousShots && body.previousShots.length > 0) {
-      contextDescription = ` Reference images provided: base character/product image plus ${body.previousShots.length} previous shot(s) for visual continuity.`;
-    } else if (body.baseImage) {
-      contextDescription = ' Reference image provided for character/product consistency.';
-    } else if (body.previousShots && body.previousShots.length > 0) {
-      contextDescription = ` ${body.previousShots.length} previous shot(s) provided for visual continuity.`;
+    let contextDescription = ' Reference images provided: base character/product image';
+    if (body.previousShots && body.previousShots.length > 0) {
+      contextDescription += ` plus ${body.previousShots.length} previous shot(s) for visual continuity`;
     }
+    contextDescription += '.';
 
     const enhancedPrompt = `Generate a professional, cinematic still image based on this description. The image should be in landscape orientation (16:9 aspect ratio) and suitable for a high-quality sizzle reel.
 
@@ -76,18 +71,16 @@ Make this visually stunning, professional, and cinematic in quality.${contextDes
     // Build the content array - include all reference images
     const contents: any[] = [{ text: enhancedPrompt }];
 
-    // Add base image if provided
-    if (body.baseImage) {
-      const [mimeTypePart, base64Data] = body.baseImage.split(',');
-      const mimeType = mimeTypePart.match(/data:([^;]+)/)?.[1] || DEFAULT_MIME_TYPE;
+    // Add base image (required)
+    const [mimeTypePart, base64Data] = body.baseImage.split(',');
+    const mimeType = mimeTypePart.match(/data:([^;]+)/)?.[1] || DEFAULT_MIME_TYPE;
 
-      contents.push({
-        inlineData: {
-          mimeType,
-          data: base64Data
-        }
-      });
-    }
+    contents.push({
+      inlineData: {
+        mimeType,
+        data: base64Data
+      }
+    });
 
     // Add previous shots if provided
     if (body.previousShots && body.previousShots.length > 0) {

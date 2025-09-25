@@ -1,7 +1,7 @@
 export interface StillImageGenerationRequest {
   prompt: string;
   shotId: string;
-  baseImage?: string; // Base64 encoded base reference image
+  baseImage: string; // Base64 encoded base reference image (required)
   previousShots?: string[]; // Array of base64 encoded previously generated shot images
 }
 
