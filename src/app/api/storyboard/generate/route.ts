@@ -15,7 +15,16 @@ const generateStoryboardPrompt = (productDescription: string) => {
 
 Product Description: ${productDescription}
 
-Create a cinematic storyboard for a sizzle reel with 4-6 shots that would effectively showcase this product. Focus on visual storytelling that highlights the product's key features and benefits.
+Create a cinematic storyboard for a sizzle reel with 4-6 shots that would effectively showcase this product. Focus on human-centered visual storytelling that shows the character's experience and interaction with their device, emphasizing emotions, reactions, and the impact of using the product.
+
+IMPORTANT: Do NOT show device screens, UI elements, or specific app interfaces in the shots. Instead, focus on:
+- Character reactions and emotions while using the device
+- Natural device handling (typing, tapping, gesturing, holding)
+- Environmental context and settings
+- Body language that conveys the product's impact
+- Moments that show the product solving problems or creating value
+
+The story should be told through human behavior and interaction, not through visible interfaces.
 
 Return your response as a JSON object with this exact structure:
 {
@@ -38,12 +47,19 @@ Make the still prompts extremely detailed and cinematic, focusing on:
 - Modern, clean visual style
 - Specific camera angles and framing
 - Color palette and mood
-- Actions, poses, and scene composition
+- Human emotions, reactions, and body language
+- Natural device interaction (without showing screens)
+- Environmental context and settings
 - Technical details that would help an AI generate a compelling image
 
-IMPORTANT: Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) in the still prompts. The visual appearance will be provided via reference image. Focus only on pose, action, camera work, lighting, and scene composition.
+IMPORTANT GUIDELINES:
+- Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) - the visual appearance will be provided via reference image
+- Do NOT show device screens, UI elements, or app interfaces in the shots
+- DO focus on human-device interaction: typing, tapping, holding, gesturing
+- DO emphasize character emotions, reactions, and the impact of the product
+- DO include environmental context that supports the story
 
-Each shot should build upon the previous one to tell a cohesive visual story about the product.`;
+Each shot should build upon the previous one to tell a cohesive human-centered story about the product's impact.`;
 };
 
 export async function POST(request: NextRequest) {
