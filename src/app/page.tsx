@@ -5,13 +5,37 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import type { StoryboardResponse } from "@/types/storyboard";
+import type { StillImageResponse } from "@/types/still-image";
 
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
+  const [baseImage, setBaseImage] = useState<string | null>(null);
   const [storyboard, setStoryboard] = useState<StoryboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<Record<string, StillImageResponse>>({});
+  const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file');
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setBaseImage(result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleGenerateStoryboard = async () => {
     if (!productDescription.trim()) {
@@ -40,10 +64,41 @@ export default function Home() {
 
       const result: StoryboardResponse = await response.json();
       setStoryboard(result);
+      setGeneratedImages({}); // Clear previous images when new storyboard is generated
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateStill = async (shotId: string, prompt: string) => {
+    setGeneratingImages(prev => ({ ...prev, [shotId]: true }));
+
+    try {
+      const response = await fetch("/api/images/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          shotId,
+          prompt,
+          baseImage,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate image");
+      }
+
+      const result: StillImageResponse = await response.json();
+      setGeneratedImages(prev => ({ ...prev, [shotId]: result }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate image");
+    } finally {
+      setGeneratingImages(prev => ({ ...prev, [shotId]: false }));
     }
   };
 
@@ -75,6 +130,28 @@ export default function Home() {
               />
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Base Image (Optional)</label>
+              <p className="text-xs text-muted-foreground">
+                Upload a reference image for character/product consistency across all generated stills
+              </p>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
+              {baseImage && (
+                <div className="border rounded-lg p-2 bg-muted">
+                  <img
+                    src={baseImage}
+                    alt="Base reference image"
+                    className="max-w-32 h-auto rounded"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Reference image uploaded</p>
+                </div>
+              )}
+            </div>
+
             {error && (
               <div className="text-red-600 text-sm">{error}</div>
             )}
@@ -97,7 +174,7 @@ export default function Home() {
             <CardContent>
               <div className="space-y-6">
                 {storyboard.shots.map((shot) => (
-                  <div key={shot.id} className="border-l-2 border-primary pl-4 space-y-2">
+                  <div key={shot.id} className="border-l-2 border-primary pl-4 space-y-4">
                     <div className="flex items-center gap-2">
                       <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-sm font-medium">
                         Shot {shot.order}
@@ -105,9 +182,33 @@ export default function Home() {
                       <h3 className="font-semibold">{shot.title}</h3>
                     </div>
                     <p className="text-sm text-muted-foreground">{shot.description}</p>
+
                     <div className="bg-muted p-3 rounded-md">
                       <p className="text-xs text-muted-foreground mb-1">Still Prompt:</p>
                       <p className="text-sm">{shot.stillPrompt}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Button
+                        onClick={() => handleGenerateStill(shot.id, shot.stillPrompt)}
+                        disabled={generatingImages[shot.id]}
+                        size="sm"
+                      >
+                        {generatingImages[shot.id] ? "Generating..." : "Generate Still"}
+                      </Button>
+
+                      {generatedImages[shot.id] && (
+                        <div className="border rounded-lg p-4 bg-background">
+                          <img
+                            src={generatedImages[shot.id].imageUrl}
+                            alt={`Still for ${shot.title}`}
+                            className="w-full h-auto rounded-md"
+                          />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Generated in {generatedImages[shot.id].processingTimeMs}ms
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
