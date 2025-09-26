@@ -208,9 +208,16 @@ export default function Home() {
                     </div>
                     <p className="text-sm text-muted-foreground">{shot.description}</p>
 
-                    <div className="bg-muted p-3 rounded-md">
-                      <p className="text-xs text-muted-foreground mb-1">Still Prompt:</p>
-                      <p className="text-sm">{shot.stillPrompt}</p>
+                    <div className="space-y-3">
+                      <div className="bg-muted p-3 rounded-md">
+                        <p className="text-xs text-muted-foreground mb-1">Still Prompt:</p>
+                        <p className="text-sm">{shot.stillPrompt}</p>
+                      </div>
+
+                      <div className="bg-muted p-3 rounded-md">
+                        <p className="text-xs text-muted-foreground mb-1">Video Prompt:</p>
+                        <p className="text-sm">{shot.videoPrompt}</p>
+                      </div>
                     </div>
 
                     <div className="space-y-3">

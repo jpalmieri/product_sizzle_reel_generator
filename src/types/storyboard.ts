@@ -3,6 +3,7 @@ export interface StoryboardShot {
   title: string;
   description: string;
   stillPrompt: string;
+  videoPrompt: string;
   order: number;
 }
 

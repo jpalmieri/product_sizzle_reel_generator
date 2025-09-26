@@ -42,6 +42,7 @@ Return your response as a JSON object with this exact structure:
       "title": "Shot title",
       "description": "What happens in this shot and why it's important",
       "stillPrompt": "Detailed prompt for generating a cinematic landscape still image for this shot. Include specific details about composition, lighting, mood, colors, and visual style. Make it highly detailed and specific for AI image generation.",
+      "videoPrompt": "Detailed prompt for generating a cinematic video sequence from this shot. Describe camera movements, duration, timing, pacing, and how the scene unfolds over time. Include specific motion details and cinematographic techniques.",
       "order": 1
     }
   ]
@@ -63,6 +64,24 @@ VISUAL STORYTELLING:
 - Environmental context that supports the Free World/trucking narrative
 - Authentic settings: modest homes, community centers, truck stops, training facilities, highways
 - Technical cinematography details for AI generation: f-stop, focal length, lighting direction
+
+Make the video prompts extremely detailed and motion-focused, including:
+
+VIDEO PRODUCTION GUIDELINES:
+- Duration: 3-8 seconds per shot for sizzle reel pacing
+- Camera movements: smooth dolly, crane, handheld, slider, gimbal movements
+- Pacing: slow, contemplative moments vs dynamic action sequences as appropriate
+- Timing: specific beats when key actions or emotions occur
+- Transitions: how the shot should begin and end to flow into next shot
+- Motion blur and depth changes throughout the sequence
+
+VIDEO STORYTELLING:
+- Character arc progression within the shot (emotional beats)
+- Natural progression of device interaction and reactions
+- Environmental changes or reveals during the shot
+- Subtle emotional shifts and micro-expressions
+- Physical movement that supports the narrative
+- How the shot advances the overall Free World story
 
 IMPORTANT GUIDELINES:
 - Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) - the visual appearance will be provided via reference image
