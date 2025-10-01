@@ -6,21 +6,44 @@ An AI-assisted sizzle reel generator for software/app product features built wit
 
 This application generates cinematic sizzle reels by combining user-provided product descriptions with AI-generated visual content.
 
-## Pipeline
+## Long-Term Vision
 
-### Phase 1: Core AI Workflow (Current Focus)
-1. **Input**: User provides text description of product feature
-2. **Storyboard Generation**: Gemini creates a screenplay/storyboard with shot lists and prompts for stills
-3. **Still Generation**: Gemini generates landscape stills for each shot
-4. **Review & Edit**: User can review and regenerate individual stills
+The complete sizzle reel workflow combines **AI-generated cinematic shots** (human interaction, emotions) with **UI screen recording clips** (showing actual product functionality) to create compelling product videos.
 
-### Phase 2: Advanced Features (Future)
-5. **Character Integration**: User uploads character image for consistent character across stills
-6. **Video Upload**: User uploads screen recording of product feature
-7. **Video Analysis**: Gemini analyzes the screen recording for timing and integration
-8. **Video Generation**: Convert stills to video clips (research image-to-video options like Google Veo)
-9. **Preview**: Simple preview of complete sizzle reel
-10. **Assembly**: FFmpeg stitches everything into final MP4
+**Complete Flow:**
+1. User uploads character image + product description + UI screen recording
+2. AI analyzes UI recording → timestamped description of what happens when
+3. AI generates storyboard that intelligently mixes:
+   - **Cinematic shots**: Human interaction/reactions (AI-generated stills → videos)
+   - **UI clips**: Specific moments from screen recording with timestamps
+4. AI generates cinematic stills/videos
+5. Automated video assembly cuts UI clips at specified timestamps and stitches with cinematic shots
+6. Final sizzle reel exports as MP4
+
+## Implementation Phases
+
+### Phase 1: UI Recording Analysis & Enhanced Storyboards (Current Focus)
+**Goal**: Storyboards informed by actual UI functionality, intelligently mixing shot types
+
+1. **Video Upload & Analysis API**: Upload UI screen recording, Gemini analyzes and returns timestamped description
+2. **Enhanced Storyboard Generation**: Accepts product description + UI analysis, outputs mixed shot types:
+   - Cinematic shots with `stillPrompt`/`videoPrompt` for AI generation
+   - UI shots with timestamps indicating which clip from recording to use
+3. **Type-Aware Image Generation**: Only generate images for cinematic shots
+4. **Manual UI Integration**: User manually edits UI clips for now (automation in Phase 2)
+
+### Phase 2: Cinematic Video Generation
+**Goal**: Convert AI-generated stills to video clips with motion
+
+5. **Video Generation System**: Convert approved stills to video clips using image-to-video service (research Google Veo, Runway, etc.)
+6. **Video Editing UI**: Prompt editing, regeneration, timing controls for video clips
+
+### Phase 3: Automated Assembly
+**Goal**: Fully automated sizzle reel creation
+
+7. **Automated UI Clip Extraction**: Extract specific clips from UI recording using timestamps from storyboard
+8. **Video Assembly Pipeline**: FFmpeg stitches cinematic videos + UI clips into final sizzle reel
+9. **Preview & Export**: Simple preview player and MP4 export
 
 ## Tech Stack
 
@@ -47,35 +70,53 @@ The primary use case is for **Free World** - a portal helping formerly incarcera
 
 ## Storyboard Generation Guidelines
 
-Storyboard prompts should:
-- **Primary Focus**: Showcase the specific product feature's functionality and value
+### Shot Types
+Storyboards contain two types of shots:
+- **Cinematic shots**: Human interaction, emotions, reactions (AI-generated from base character image)
+  - Includes `stillPrompt` and `videoPrompt` for AI generation
+  - No UI screens visible - focus on device handling and emotional reactions
+- **UI shots**: Screen recording clips showing actual product functionality
+  - Includes `uiDescription` describing what's shown
+  - Includes `startTime` and `endTime` timestamps (in seconds) from the UI recording
+  - Used to extract specific clips from uploaded screen recording
+
+### Storyboard Generation Strategy
+The AI should intelligently decide shot types based on what best showcases the feature:
+- Use **cinematic shots** for: setup, emotional reactions, human interaction, impact/benefit moments
+- Use **UI shots** for: demonstrating specific functionality, showing feature in action
+- Alternate between types to create engaging rhythm and comprehensive feature demonstration
+
+### Cinematic Shot Guidelines
+- **Primary Focus**: Showcase the specific product feature's functionality and value through human behavior
 - **Context Role**: Use Free World background for authentic settings and character circumstances
 - **Narrative Arc**: Setup → Feature in Action → Benefit (not the full user journey)
 - **Visual Approach**: Human-device interaction, emotional reactions, environmental storytelling
 - **No UI Screens**: Focus on device handling and reactions, not screen contents
 - **Character Consistency**: Base image required; avoid appearance descriptions in prompts
 
-## Implementation Order (Updated)
+## Current Implementation Status
 
-Work on GitHub issues in this sequence:
+### Completed
+- ✅ Next.js + TypeScript setup (#1, #13, #14, #15)
+- ✅ Basic storyboard generation API (#3)
+- ✅ Still image generation system (#4)
+- ✅ Character image requirement and consistency (#22)
+- ✅ Human-centered storytelling approach (#24)
+- ✅ Free World context integration (#26)
+- ✅ Video prompt generation (#28)
+- ✅ Feature-focused storyboard prompts (#30)
 
-**Phase 1: Core Workflow**
-1. **#3** - Storyboard Generation API (product description -> storyboard)
-2. **#4** - Still Image Generation System (storyboard -> stills)
-3. **#9** - UI: Upload and Storyboard Review Interface (simplified for text input)
-4. **#10** - UI: Still Image Gallery and Editing
+### In Progress - Phase 1
+- 🔄 Video upload and analysis API (#2)
+- 🔄 Enhanced storyboard with shot types (cinematic vs UI)
+- 🔄 Type-aware image generation
 
-**Phase 2: Advanced Features (Later)**
-5. **#12** - Character Image Upload and Integration
-6. **#2** - Video Upload and Processing API
-7. **#5** - Video Clip Generation System
-8. **#11** - UI: Video Generation and Timing Controls
-9. **#6** - Sizzle Reel Preview System
-10. **#7** - Final Video Assembly and Export
-
-## GitHub Issues
-
-Created 14 issues total:
-- Completed setup issues #13, #14, #15
-- Core workflow issues: #3, #4, #9, #10
-- Advanced features: #2, #5, #6, #7, #11, #12
+### Planned - Phase 2 & 3
+- UI: Upload and storyboard review (#9)
+- UI: Still image gallery and editing (#10)
+- Character image upload integration (#12)
+- Video clip generation system (#5)
+- UI: Video generation and timing controls (#11)
+- Automated UI clip extraction
+- Sizzle reel preview (#6)
+- Final video assembly and export (#7)

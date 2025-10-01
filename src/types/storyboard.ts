@@ -1,11 +1,24 @@
-export interface StoryboardShot {
+interface BaseShotInfo {
   id: string;
   title: string;
   description: string;
-  stillPrompt: string;
-  videoPrompt: string;
   order: number;
 }
+
+export interface CinematicShot extends BaseShotInfo {
+  shotType: "cinematic";
+  stillPrompt: string;
+  videoPrompt: string;
+}
+
+export interface UIShot extends BaseShotInfo {
+  shotType: "ui";
+  uiDescription: string;
+  startTime: number; // in seconds
+  endTime: number; // in seconds
+}
+
+export type StoryboardShot = CinematicShot | UIShot;
 
 export interface StoryboardResponse {
   title: string;
@@ -15,4 +28,13 @@ export interface StoryboardResponse {
 
 export interface StoryboardGenerationRequest {
   productDescription: string;
+  videoAnalysis?: {
+    overallDescription: string;
+    duration: number;
+    segments: Array<{
+      startTime: number;
+      endTime: number;
+      description: string;
+    }>;
+  };
 }

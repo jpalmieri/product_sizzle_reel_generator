@@ -54,21 +54,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let contextDescription = ' Reference images provided: base character/product image';
-    if (body.previousShots && body.previousShots.length > 0) {
-      contextDescription += ` plus ${body.previousShots.length} previous shot(s) for visual continuity`;
-    }
-    contextDescription += '.';
-
     const enhancedPrompt = `Generate a professional, cinematic still image based on this description. The image should be in landscape orientation (16:9 aspect ratio) and suitable for a high-quality sizzle reel.
 
 ${body.prompt}
 
-Make this visually stunning, professional, and cinematic in quality.${contextDescription}`;
+Make this visually stunning, professional, and cinematic in quality. Reference image provided: base character/product image.`;
 
     const startTime = Date.now();
 
-    // Build the content array - include all reference images
+    // Build the content array - only include base image
     const contents: any[] = [{ text: enhancedPrompt }];
 
     // Add base image (required)
@@ -81,21 +75,6 @@ Make this visually stunning, professional, and cinematic in quality.${contextDes
         data: base64Data
       }
     });
-
-    // Add previous shots if provided
-    if (body.previousShots && body.previousShots.length > 0) {
-      body.previousShots.forEach((shotImage) => {
-        const [mimeTypePart, base64Data] = shotImage.split(',');
-        const mimeType = mimeTypePart.match(/data:([^;]+)/)?.[1] || DEFAULT_MIME_TYPE;
-
-        contents.push({
-          inlineData: {
-            mimeType,
-            data: base64Data
-          }
-        });
-      });
-    }
 
     const response = await genAI.models.generateContent({
       model: GEMINI_MODEL,

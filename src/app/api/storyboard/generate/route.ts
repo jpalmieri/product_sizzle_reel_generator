@@ -10,10 +10,22 @@ const GEMINI_MODEL = "gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `You are a creative director specializing in cinematic sizzle reels for software products and app features. Create compelling visual stories that showcase specific product functionality and user experience.`;
 
-const generateStoryboardPrompt = (productDescription: string) => {
+const generateStoryboardPrompt = (productDescription: string, videoAnalysis?: StoryboardGenerationRequest["videoAnalysis"]) => {
+  const videoContext = videoAnalysis ? `
+
+UI SCREEN RECORDING ANALYSIS:
+The user has provided a ${videoAnalysis.duration}-second screen recording of the app feature. Here's what happens in it:
+
+Overall: ${videoAnalysis.overallDescription}
+
+Timestamped segments:
+${videoAnalysis.segments.map(seg => `- ${seg.startTime}s-${seg.endTime}s: ${seg.description}`).join('\n')}
+
+You can reference these specific UI moments by their timestamps when deciding to use UI shots.` : '';
+
   return `${SYSTEM_PROMPT}
 
-Product Feature to Showcase: ${productDescription}
+Product Feature to Showcase: ${productDescription}${videoContext}
 
 Create a cinematic storyboard for a sizzle reel with 4-6 shots that showcases THIS SPECIFIC PRODUCT FEATURE in action. The story should focus on demonstrating the feature's functionality, benefits, and user experience.
 
@@ -26,14 +38,30 @@ CONTEXT: This is for the Free World app - a portal helping formerly incarcerated
 
 Focus on realistic, authentic settings - modest homes, community spaces, truck stops, training facilities, and other grounded environments. Avoid corporate or expensive locations.
 
-IMPORTANT: Do NOT show device screens, UI elements, or specific app interfaces in the shots. Instead, focus on:
-- Character emotions and reactions while using the device
-- Natural device handling (typing, tapping, gesturing, holding, scrolling)
-- Authentic environmental context that supports the feature demonstration
-- Body language that conveys the feature's impact and value
-- Moments that show the feature solving the user's specific problem
+SHOT TYPES:
+Your storyboard should intelligently mix two types of shots based on what best tells the story:
 
-The story should be told through human behavior, emotional beats, and environmental storytelling focused on THIS SPECIFIC FEATURE.
+1. CINEMATIC SHOTS (AI-generated): Human interaction, emotions, reactions
+   - Do NOT show device screens or UI elements
+   - Focus on: character emotions, natural device handling (typing, tapping, gesturing), body language, environmental context
+   - Include "stillPrompt" and "videoPrompt" fields
+   - Set "shotType": "cinematic"
+
+2. UI SHOTS (from screen recording): Actual product functionality${videoAnalysis ? '' : ' (optional - only if UI recording is provided)'}
+   - Show specific UI interactions from the screen recording
+   - Include "uiDescription" describing what's shown
+   - Include "startTime" and "endTime" timestamps (in seconds) from the recording
+   - Set "shotType": "ui"
+
+SHOT SELECTION STRATEGY:
+Decide which shot type to use based on what best serves the story at each moment:
+- Use CINEMATIC shots when human emotion, context, or reaction tells the story better
+- Use UI shots when showing specific functionality or interface interaction is essential${videoAnalysis ? '' : ' (only if screen recording was provided)'}
+- You may use multiple cinematic shots in a row if that serves the narrative
+- You may use multiple UI shots in a row if demonstrating a complex workflow
+- The goal is effective storytelling, not rigid patterns
+
+The cinematic story should be told through human behavior, emotional beats, and environmental storytelling focused on THIS SPECIFIC FEATURE.
 
 Return your response as a JSON object with this exact structure:
 {
@@ -42,16 +70,27 @@ Return your response as a JSON object with this exact structure:
   "shots": [
     {
       "id": "shot-1",
+      "shotType": "cinematic",
       "title": "Shot title",
       "description": "What happens in this shot and why it's important",
-      "stillPrompt": "Detailed prompt for generating a cinematic landscape still image for this shot. Include specific details about composition, lighting, mood, colors, and visual style. Make it highly detailed and specific for AI image generation.",
-      "videoPrompt": "Detailed prompt for generating a cinematic video sequence from this shot. Describe camera movements, duration, timing, pacing, and how the scene unfolds over time. Include specific motion details and cinematographic techniques.",
+      "stillPrompt": "Detailed prompt for generating a cinematic landscape still image...",
+      "videoPrompt": "Detailed prompt for generating a cinematic video sequence...",
       "order": 1
+    },
+    {
+      "id": "shot-2",
+      "shotType": "ui",
+      "title": "Shot title",
+      "description": "What happens in this shot and why it's important",
+      "uiDescription": "Description of what UI interaction to show",
+      "startTime": 5.0,
+      "endTime": 10.5,
+      "order": 2
     }
   ]
 }
 
-Make the still prompts extremely detailed and cinematic, focusing on:
+For CINEMATIC shots, make the still and video prompts extremely detailed and cinematic, focusing on:
 
 CINEMATIC PRODUCTION:
 - Landscape orientation (16:9 aspect ratio)
@@ -68,7 +107,7 @@ VISUAL STORYTELLING:
 - Authentic settings: modest homes, community centers, truck stops, training facilities, highways
 - Technical cinematography details for AI generation: f-stop, focal length, lighting direction
 
-Make the video prompts extremely detailed and motion-focused, including:
+For CINEMATIC shots, make the video prompts extremely detailed and motion-focused, including:
 
 VIDEO PRODUCTION GUIDELINES:
 - Duration: 3-8 seconds per shot for sizzle reel pacing
@@ -86,9 +125,9 @@ VIDEO STORYTELLING:
 - Physical movement that supports demonstrating the feature
 - How the shot advances the demonstration of this specific feature's value
 
-IMPORTANT GUIDELINES:
+IMPORTANT GUIDELINES FOR CINEMATIC SHOTS:
 - Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) - the visual appearance will be provided via reference image
-- Do NOT show device screens, UI elements, or app interfaces in the shots
+- Do NOT show device screens, UI elements, or app interfaces in cinematic shots
 - DO focus on human-device interaction: typing, tapping, holding, gesturing, scrolling
 - DO emphasize character emotions and reactions that demonstrate this feature's impact and value
 - DO include authentic environmental context that supports demonstrating this specific feature
@@ -125,7 +164,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = generateStoryboardPrompt(body.productDescription);
+    const prompt = generateStoryboardPrompt(body.productDescription, body.videoAnalysis);
 
     const startTime = Date.now();
     const response = await genAI.models.generateContent({
