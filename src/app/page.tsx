@@ -340,6 +340,22 @@ export default function Home() {
                             ({(shot.endTime - shot.startTime).toFixed(1)}s duration)
                           </p>
                         </div>
+
+                        {videoFile && (
+                          <div className="border rounded-lg p-4 bg-background max-w-md">
+                            <video
+                              src={`${videoFile}#t=${shot.startTime},${shot.endTime}`}
+                              controls
+                              className="w-full h-auto rounded-md"
+                              preload="metadata"
+                            >
+                              Your browser does not support the video tag.
+                            </video>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Video clip: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 
