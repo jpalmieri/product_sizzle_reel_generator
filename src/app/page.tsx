@@ -8,10 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
+import type { VideoAnalysisResponse } from "@/types/video-analysis";
 
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
   const [baseImage, setBaseImage] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<string | null>(null);
+  const [videoMimeType, setVideoMimeType] = useState<string | null>(null);
+  const [videoAnalysis, setVideoAnalysis] = useState<VideoAnalysisResponse | null>(null);
+  const [analyzingVideo, setAnalyzingVideo] = useState(false);
   const [storyboard, setStoryboard] = useState<StoryboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +42,71 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+      setError('Please select a valid video file');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      setError(`Video file too large. Maximum size is 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB. Please trim or compress your video.`);
+      return;
+    }
+
+    setError(null);
+    setVideoAnalysis(null); // Clear previous analysis
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setVideoFile(result);
+      setVideoMimeType(file.type);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAnalyzeVideo = async () => {
+    if (!videoFile || !videoMimeType) {
+      setError("Please upload a video first");
+      return;
+    }
+
+    setAnalyzingVideo(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/video/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          video: videoFile,
+          mimeType: videoMimeType,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to analyze video");
+      }
+
+      const result: VideoAnalysisResponse = await response.json();
+      setVideoAnalysis(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to analyze video");
+    } finally {
+      setAnalyzingVideo(false);
+    }
+  };
+
   const handleGenerateStoryboard = async () => {
     if (!productDescription.trim()) {
       setError("Please enter a product description");
@@ -47,14 +117,25 @@ export default function Home() {
     setError(null);
 
     try {
+      const requestBody: { productDescription: string; videoAnalysis?: VideoAnalysisResponse } = {
+        productDescription: productDescription.trim(),
+      };
+
+      // Include video analysis if available
+      if (videoAnalysis) {
+        requestBody.videoAnalysis = {
+          overallDescription: videoAnalysis.overallDescription,
+          duration: videoAnalysis.duration,
+          segments: videoAnalysis.segments,
+        };
+      }
+
       const response = await fetch("/api/storyboard/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          productDescription: productDescription.trim(),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -80,24 +161,7 @@ export default function Home() {
 
     setGeneratingImages(prev => ({ ...prev, [shotId]: true }));
 
-    // Get previously generated shots for this storyboard (shots with order < current shot order)
-    const currentShot = storyboard?.shots.find(shot => shot.id === shotId);
     const previousShots: string[] = [];
-
-    if (currentShot && storyboard) {
-      // Get all shots with lower order that have been generated
-      const previousShotIds = storyboard.shots
-        .filter(shot => shot.order < currentShot.order)
-        .sort((a, b) => a.order - b.order)
-        .map(shot => shot.id);
-
-      // Collect the image URLs of previously generated shots
-      previousShotIds.forEach(id => {
-        if (generatedImages[id]?.imageUrl) {
-          previousShots.push(generatedImages[id].imageUrl);
-        }
-      });
-    }
 
     try {
       const response = await fetch("/api/images/generate", {
@@ -141,7 +205,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Generate Storyboard</CardTitle>
             <CardDescription>
-              Describe your product and we'll create a cinematic storyboard for your sizzle reel
+              Describe your product and we&apos;ll create a cinematic storyboard for your sizzle reel
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -177,6 +241,45 @@ export default function Home() {
               )}
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium">UI Screen Recording (Optional)</label>
+              <p className="text-xs text-muted-foreground">
+                Upload a screen recording of your app feature. The AI will analyze it and intelligently mix UI clips with cinematic shots. Max 10MB, recommended under 60 seconds.
+              </p>
+              <Input
+                type="file"
+                accept="video/*"
+                onChange={handleVideoUpload}
+              />
+              {videoFile && (
+                <div className="space-y-2">
+                  <div className="border rounded-lg p-3 bg-muted">
+                    <p className="text-sm font-medium">Video uploaded</p>
+                    <p className="text-xs text-muted-foreground">Ready to analyze</p>
+                  </div>
+                  {!videoAnalysis && (
+                    <Button
+                      onClick={handleAnalyzeVideo}
+                      disabled={analyzingVideo}
+                      size="sm"
+                      variant="outline"
+                    >
+                      {analyzingVideo ? "Analyzing video..." : "Analyze Video"}
+                    </Button>
+                  )}
+                  {videoAnalysis && (
+                    <div className="border rounded-lg p-3 bg-green-50 dark:bg-green-950">
+                      <p className="text-sm font-medium text-green-900 dark:text-green-100">✓ Video analyzed</p>
+                      <p className="text-xs text-green-700 dark:text-green-300">
+                        Duration: {videoAnalysis.duration.toFixed(1)}s • {videoAnalysis.segments.length} segments identified
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{videoAnalysis.overallDescription}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {error && (
               <div className="text-red-600 text-sm">{error}</div>
             )}
@@ -204,70 +307,78 @@ export default function Home() {
                       <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-sm font-medium">
                         Shot {shot.order}
                       </span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        shot.shotType === 'cinematic'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                      }`}>
+                        {shot.shotType === 'cinematic' ? '🎬 Cinematic' : '📱 UI'}
+                      </span>
                       <h3 className="font-semibold">{shot.title}</h3>
                     </div>
                     <p className="text-sm text-muted-foreground">{shot.description}</p>
 
-                    <div className="space-y-3">
-                      <div className="bg-muted p-3 rounded-md">
-                        <p className="text-xs text-muted-foreground mb-1">Still Prompt:</p>
-                        <p className="text-sm">{shot.stillPrompt}</p>
+                    {shot.shotType === 'cinematic' ? (
+                      <div className="space-y-3">
+                        <div className="bg-muted p-3 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Still Prompt:</p>
+                          <p className="text-sm">{shot.stillPrompt}</p>
+                        </div>
+
+                        <div className="bg-muted p-3 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Video Prompt:</p>
+                          <p className="text-sm">{shot.videoPrompt}</p>
+                        </div>
                       </div>
-
-                      <div className="bg-muted p-3 rounded-md">
-                        <p className="text-xs text-muted-foreground mb-1">Video Prompt:</p>
-                        <p className="text-sm">{shot.videoPrompt}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      {(() => {
-                        const previousShotCount = storyboard.shots
-                          .filter(s => s.order < shot.order)
-                          .filter(s => generatedImages[s.id]?.imageUrl).length;
-                        const hasPreviousShots = previousShotCount > 0;
-
-                        return (
-                          <div className="space-y-2">
-                            <Button
-                              onClick={() => handleGenerateStill(shot.id, shot.stillPrompt)}
-                              disabled={generatingImages[shot.id] || !baseImage}
-                              size="sm"
-                            >
-                              {generatingImages[shot.id] ? "Generating..." : "Generate Still"}
-                            </Button>
-                            <div className="space-y-1">
-                              <p className="text-xs text-green-600">
-                                ✅ Will use base image for character appearance
-                              </p>
-                              {hasPreviousShots && (
-                                <p className="text-xs text-muted-foreground">
-                                  ✨ Plus {previousShotCount} previous shot{previousShotCount > 1 ? 's' : ''} for visual continuity
-                                </p>
-                              )}
-                              {!baseImage && (
-                                <p className="text-xs text-red-600">
-                                  ⚠️ Base image required before generating stills
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {generatedImages[shot.id] && (
-                        <div className="border rounded-lg p-4 bg-background">
-                          <img
-                            src={generatedImages[shot.id].imageUrl}
-                            alt={`Still for ${shot.title}`}
-                            className="w-full h-auto rounded-md"
-                          />
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 mb-1">UI Screen Recording Clip:</p>
+                          <p className="text-sm font-medium">{shot.uiDescription}</p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            Generated in {generatedImages[shot.id].processingTimeMs}ms
+                            Timestamp: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
+                            ({(shot.endTime - shot.startTime).toFixed(1)}s duration)
                           </p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {shot.shotType === 'cinematic' && (
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Button
+                            onClick={() => handleGenerateStill(shot.id, shot.stillPrompt)}
+                            disabled={generatingImages[shot.id] || !baseImage}
+                            size="sm"
+                          >
+                            {generatingImages[shot.id] ? "Generating..." : "Generate Still"}
+                          </Button>
+                          <div className="space-y-1">
+                            <p className="text-xs text-green-600">
+                              ✅ Will use base image for character appearance
+                            </p>
+                            {!baseImage && (
+                              <p className="text-xs text-red-600">
+                                ⚠️ Base image required before generating stills
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {generatedImages[shot.id] && (
+                          <div className="border rounded-lg p-4 bg-background">
+                            <img
+                              src={generatedImages[shot.id].imageUrl}
+                              alt={`Still for ${shot.title}`}
+                              className="w-full h-auto rounded-md"
+                            />
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Generated in {generatedImages[shot.id].processingTimeMs}ms
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
