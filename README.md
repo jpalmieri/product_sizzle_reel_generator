@@ -38,7 +38,7 @@ An AI-assisted sizzle reel generator for software/app product features. Transfor
    cp .env.example .env.local
    ```
 
-   Edit `.env.local` and add your Google AI API key.
+   Edit `.env.local` and add your Google AI API key (this is `GOOGLE_AI_STUDIO_API_KEY` in the SP).
 
 4. Start the development server:
 
