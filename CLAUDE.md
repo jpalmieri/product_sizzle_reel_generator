@@ -36,6 +36,25 @@ This application generates cinematic sizzle reels by combining user-provided pro
 - Focus on product description -> storyboard -> stills workflow first
 - Add complexity (video upload/processing) in later phases
 
+## Product Context
+
+The primary use case is for **Free World** - a portal helping formerly incarcerated individuals train for and find work in the trucking industry. This context informs:
+- Authentic settings (modest homes, community spaces, truck stops, training facilities)
+- Character circumstances and emotional authenticity
+- Visual storytelling that respects and dignifies the community
+
+**IMPORTANT**: The Free World context provides setting and authenticity, but storyboards should focus on demonstrating the **specific product feature** described by the user, not the entire user journey or app mission.
+
+## Storyboard Generation Guidelines
+
+Storyboard prompts should:
+- **Primary Focus**: Showcase the specific product feature's functionality and value
+- **Context Role**: Use Free World background for authentic settings and character circumstances
+- **Narrative Arc**: Setup → Feature in Action → Benefit (not the full user journey)
+- **Visual Approach**: Human-device interaction, emotional reactions, environmental storytelling
+- **No UI Screens**: Focus on device handling and reactions, not screen contents
+- **Character Consistency**: Base image required; avoid appearance descriptions in prompts
+
 ## Implementation Order (Updated)
 
 Work on GitHub issues in this sequence:

@@ -8,29 +8,32 @@ const genAI = new GoogleGenAI({
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
-const SYSTEM_PROMPT = `You are a creative director specializing in cinematic sizzle reels for the Free World app - a portal helping formerly incarcerated individuals train for and find work in the trucking industry. Create authentic, dignified stories that represent this community with respect and showcase meaningful opportunities for second chances and career growth in professional trucking.`;
+const SYSTEM_PROMPT = `You are a creative director specializing in cinematic sizzle reels for software products and app features. Create compelling visual stories that showcase specific product functionality and user experience.`;
 
 const generateStoryboardPrompt = (productDescription: string) => {
   return `${SYSTEM_PROMPT}
 
-Product Description: ${productDescription}
+Product Feature to Showcase: ${productDescription}
 
-Create a cinematic storyboard for a sizzle reel with 4-6 shots that tells a compelling story about formerly incarcerated individuals finding opportunity and hope through the Free World app's connection to trucking careers. Build a narrative arc that shows:
+Create a cinematic storyboard for a sizzle reel with 4-6 shots that showcases THIS SPECIFIC PRODUCT FEATURE in action. The story should focus on demonstrating the feature's functionality, benefits, and user experience.
 
-1. THE CHALLENGE: The difficulty of reentry and finding meaningful work
-2. THE SOLUTION: Discovering opportunity through the Free World app
-3. THE IMPACT: Progress, hope, and tangible career advancement in trucking
+Build a simple narrative arc:
+1. THE SETUP: User context or need that this feature addresses
+2. THE FEATURE IN ACTION: Showing the specific functionality being used
+3. THE BENEFIT: The positive outcome or value delivered by this feature
 
-Focus on authentic, dignified representation in realistic settings - NOT corporate environments or expensive locations. Show modest homes, community spaces, truck stops, training facilities, and other authentic environments this community would recognize.
+CONTEXT: This is for the Free World app - a portal helping formerly incarcerated individuals train for and find work in the trucking industry. Use this context to inform authentic settings and character circumstances, but keep the PRIMARY FOCUS on showcasing the specific product feature described above.
+
+Focus on realistic, authentic settings - modest homes, community spaces, truck stops, training facilities, and other grounded environments. Avoid corporate or expensive locations.
 
 IMPORTANT: Do NOT show device screens, UI elements, or specific app interfaces in the shots. Instead, focus on:
-- Character emotions and reactions while using the device (hope, determination, relief, progress)
+- Character emotions and reactions while using the device
 - Natural device handling (typing, tapping, gesturing, holding, scrolling)
-- Authentic environmental context (modest settings, trucking industry elements)
-- Body language that conveys the life-changing impact of finding career opportunities
-- Moments that show the Free World app solving real reentry challenges
+- Authentic environmental context that supports the feature demonstration
+- Body language that conveys the feature's impact and value
+- Moments that show the feature solving the user's specific problem
 
-The story should be told through human behavior, emotional beats, and environmental storytelling that resonates with the formerly incarcerated community and shows the dignity of second chances.
+The story should be told through human behavior, emotional beats, and environmental storytelling focused on THIS SPECIFIC FEATURE.
 
 Return your response as a JSON object with this exact structure:
 {
@@ -59,9 +62,9 @@ CINEMATIC PRODUCTION:
 - Color grading: warm/cool color temperature shifts for emotional beats, cinematic color palettes
 
 VISUAL STORYTELLING:
-- Human emotions, reactions, and body language that tell the story
+- Human emotions, reactions, and body language that demonstrate the feature's value
 - Natural device interaction (without showing screens) - typing, scrolling, gesturing, holding
-- Environmental context that supports the Free World/trucking narrative
+- Environmental context that supports demonstrating this specific feature
 - Authentic settings: modest homes, community centers, truck stops, training facilities, highways
 - Technical cinematography details for AI generation: f-stop, focal length, lighting direction
 
@@ -76,19 +79,19 @@ VIDEO PRODUCTION GUIDELINES:
 - Motion blur and depth changes throughout the sequence
 
 VIDEO STORYTELLING:
-- Character arc progression within the shot (emotional beats)
-- Natural progression of device interaction and reactions
+- Character arc progression within the shot (emotional beats related to feature use)
+- Natural progression of device interaction and reactions to the feature
 - Environmental changes or reveals during the shot
-- Subtle emotional shifts and micro-expressions
-- Physical movement that supports the narrative
-- How the shot advances the overall Free World story
+- Subtle emotional shifts and micro-expressions showing feature impact
+- Physical movement that supports demonstrating the feature
+- How the shot advances the demonstration of this specific feature's value
 
 IMPORTANT GUIDELINES:
 - Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) - the visual appearance will be provided via reference image
 - Do NOT show device screens, UI elements, or app interfaces in the shots
 - DO focus on human-device interaction: typing, tapping, holding, gesturing, scrolling
-- DO emphasize character emotions, reactions, and the life-changing impact of finding career opportunities
-- DO include authentic environmental context that supports the Free World/trucking story
+- DO emphasize character emotions and reactions that demonstrate this feature's impact and value
+- DO include authentic environmental context that supports demonstrating this specific feature
 
 STYLE GUARDRAILS (CRITICAL):
 - Photorealistic only - no stylized, artistic, or abstract interpretations
@@ -101,7 +104,7 @@ STYLE GUARDRAILS (CRITICAL):
 - NO text overlays, subtitles, or graphics in the shots
 
 NARRATIVE ARC REQUIREMENTS:
-Each shot should build upon the previous one to tell a cohesive story about formerly incarcerated individuals finding hope and opportunity through trucking careers via the Free World app. The progression should feel authentic, dignified, and emotionally resonant while avoiding stereotypes or exploitation.`;
+Each shot should build upon the previous one to tell a cohesive story that demonstrates this specific product feature's functionality and value. The progression should feel authentic, natural, and focused on showcasing the feature in action. Remember: the Free World context provides setting and authenticity, but the PRIMARY FOCUS is demonstrating the specific feature described in the product description.`;
 };
 
 export async function POST(request: NextRequest) {
