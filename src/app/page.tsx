@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
 import type { VideoAnalysisResponse } from "@/types/video-analysis";
+import type { VideoGenerationResponse } from "@/types/video-generation";
 
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
@@ -22,6 +23,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<Record<string, StillImageResponse>>({});
   const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
+  const [generatedVideos, setGeneratedVideos] = useState<Record<string, VideoGenerationResponse>>({});
+  const [generatingVideos, setGeneratingVideos] = useState<Record<string, boolean>>({});
+  const [veoModel, setVeoModel] = useState<'veo-2' | 'veo-3'>('veo-2');
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -188,6 +192,44 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Failed to generate image");
     } finally {
       setGeneratingImages(prev => ({ ...prev, [shotId]: false }));
+    }
+  };
+
+  const handleGenerateVideo = async (shotId: string, prompt: string) => {
+    const imageData = generatedImages[shotId];
+    if (!imageData?.imageUrl) {
+      setError("Please generate a still image first before creating a video");
+      return;
+    }
+
+    setGeneratingVideos(prev => ({ ...prev, [shotId]: true }));
+    setError(null);
+
+    try {
+      const response = await fetch("/api/videos/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          shotId,
+          imageUrl: imageData.imageUrl,
+          prompt,
+          model: veoModel,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate video");
+      }
+
+      const result: VideoGenerationResponse = await response.json();
+      setGeneratedVideos(prev => ({ ...prev, [shotId]: result }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate video");
+    } finally {
+      setGeneratingVideos(prev => ({ ...prev, [shotId]: false }));
     }
   };
 
@@ -382,15 +424,60 @@ export default function Home() {
                         </div>
 
                         {generatedImages[shot.id] && (
-                          <div className="border rounded-lg p-4 bg-background">
-                            <img
-                              src={generatedImages[shot.id].imageUrl}
-                              alt={`Still for ${shot.title}`}
-                              className="w-full h-auto rounded-md"
-                            />
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Generated in {generatedImages[shot.id].processingTimeMs}ms
-                            </p>
+                          <div className="space-y-3">
+                            <div className="border rounded-lg p-4 bg-background">
+                              <img
+                                src={generatedImages[shot.id].imageUrl}
+                                alt={`Still for ${shot.title}`}
+                                className="w-full h-auto rounded-md"
+                              />
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Generated in {generatedImages[shot.id].processingTimeMs}ms
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-3">
+                                <Button
+                                  onClick={() => handleGenerateVideo(shot.id, shot.videoPrompt)}
+                                  disabled={generatingVideos[shot.id]}
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  {generatingVideos[shot.id] ? "Generating Video..." : "Generate Video"}
+                                </Button>
+                                <select
+                                  value={veoModel}
+                                  onChange={(e) => setVeoModel(e.target.value as 'veo-2' | 'veo-3')}
+                                  disabled={generatingVideos[shot.id]}
+                                  className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                                >
+                                  <option value="veo-2">Veo 2</option>
+                                  <option value="veo-3">Veo 3</option>
+                                </select>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {generatingVideos[shot.id]
+                                  ? "⏱️ This may take several minutes..."
+                                  : "🎬 Convert still to video clip with motion"}
+                              </p>
+                            </div>
+
+                            {generatedVideos[shot.id] && (
+                              <div className="border rounded-lg p-4 bg-background">
+                                <video
+                                  src={generatedVideos[shot.id].videoUrl}
+                                  controls
+                                  className="w-full h-auto rounded-md"
+                                  preload="metadata"
+                                >
+                                  Your browser does not support the video tag.
+                                </video>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Video generated in {(generatedVideos[shot.id].processingTimeMs / 1000).toFixed(1)}s
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
