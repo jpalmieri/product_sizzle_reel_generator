@@ -688,6 +688,7 @@ export default function Home() {
                     setTimeout(() => setSeekTime(undefined), 100);
                   }}
                   generatedVideos={generatedVideos}
+                  generatedImages={generatedImages}
                 />
               </div>
             </CardContent>

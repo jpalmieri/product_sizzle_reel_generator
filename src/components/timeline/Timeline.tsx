@@ -9,9 +9,10 @@ interface TimelineProps {
   currentTime?: number;
   onSeek?: (time: number) => void;
   generatedVideos?: Record<string, any>;
+  generatedImages?: Record<string, any>;
 }
 
-export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedVideos = {} }: TimelineProps) {
+export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedVideos = {}, generatedImages = {} }: TimelineProps) {
   const { items: shotPositions, totalDuration } = useTimeline(shots);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -40,9 +41,11 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
         onClick={handleClick}
       >
         {shotPositions.map(({ shot, startTime, duration }) => {
-          const hasVideo = shot.shotType === 'cinematic'
-            ? !!generatedVideos[shot.id]
-            : true; // UI shots don't need video generation
+          // For cinematic shots: use still image; for UI shots: use video
+          const thumbnailUrl = shot.shotType === 'cinematic'
+            ? generatedImages[shot.id]?.imageUrl
+            : generatedVideos[shot.id]?.videoUrl;
+          const hasThumbnail = !!thumbnailUrl;
 
           const leftPercent = (startTime / totalDuration) * 100;
           const widthPercent = (duration / totalDuration) * 100;
@@ -50,23 +53,49 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
           return (
             <div
               key={shot.id}
-              className="absolute top-0 bottom-0 border-r border-background"
+              className="absolute top-0 bottom-0 border-r border-background overflow-hidden"
               style={{
                 left: `${leftPercent}%`,
                 width: `${widthPercent}%`,
-                background: hasVideo
-                  ? shot.shotType === 'cinematic'
-                    ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
-                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                opacity: hasVideo ? 1 : 0.5,
               }}
             >
-              <div className="p-2 text-xs text-white font-medium truncate">
+              {/* Thumbnail background */}
+              {hasThumbnail ? (
+                shot.shotType === 'cinematic' ? (
+                  <img
+                    src={thumbnailUrl}
+                    alt={`Shot ${shot.order}`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    src={thumbnailUrl}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                )
+              ) : (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: shot.shotType === 'cinematic'
+                      ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                      : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    opacity: 0.5,
+                  }}
+                />
+              )}
+
+              {/* Dark overlay for text readability */}
+              <div className="absolute inset-0 bg-black/40" />
+
+              {/* Text content */}
+              <div className="relative p-2 text-xs text-white font-medium truncate">
                 Shot {shot.order}: {shot.title}
-                {!hasVideo && ' (not generated)'}
+                {!hasThumbnail && ' (not generated)'}
               </div>
-              <div className="absolute bottom-1 right-1 text-xs text-white/70 font-mono">
+              <div className="relative absolute bottom-1 right-1 text-xs text-white/90 font-mono">
                 {duration.toFixed(1)}s
               </div>
             </div>
