@@ -125,6 +125,11 @@ export default function Home() {
       return;
     }
 
+    if (!baseImage) {
+      setError("Please upload a base image");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -165,6 +170,22 @@ export default function Home() {
         const uiShots = result.shots.filter(shot => shot.shotType === 'ui');
         for (const shot of uiShots) {
           handleExtractClip(shot.id, shot.startTime, shot.endTime);
+        }
+      }
+
+      // Auto-generate stills for cinematic shots (baseImage should exist due to earlier validation)
+      if (baseImage) {
+        for (const shot of result.shots) {
+          if (shot.shotType === 'cinematic') {
+            handleGenerateStill(shot.id, shot.stillPrompt);
+          }
+        }
+      }
+
+      // Auto-generate narration for all segments
+      if (result.narration && result.narration.length > 0) {
+        for (const segment of result.narration) {
+          handleGenerateNarration(segment.id, segment.text);
         }
       }
     } catch (err) {
@@ -347,9 +368,9 @@ export default function Home() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Base Image (Required)</label>
+              <label className="text-sm font-medium">Character Image (Required)</label>
               <p className="text-xs text-muted-foreground">
-                Upload a reference image of your character/product - this ensures visual consistency and prevents conflicting appearance descriptions in prompts
+                Upload a reference image of your character - this ensures visual consistency across all generated stills
               </p>
               <Input
                 type="file"
@@ -360,10 +381,10 @@ export default function Home() {
                 <div className="border rounded-lg p-2 bg-muted">
                   <img
                     src={baseImage}
-                    alt="Base reference image"
+                    alt="Character reference image"
                     className="max-w-32 h-auto rounded"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Reference image uploaded</p>
+                  <p className="text-xs text-muted-foreground mt-1">Character image uploaded</p>
                 </div>
               )}
             </div>
