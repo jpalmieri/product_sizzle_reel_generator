@@ -25,7 +25,7 @@ export default function Home() {
   const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
   const [generatedVideos, setGeneratedVideos] = useState<Record<string, VideoGenerationResponse>>({});
   const [generatingVideos, setGeneratingVideos] = useState<Record<string, boolean>>({});
-  const [veoModel, setVeoModel] = useState<'veo-2' | 'veo-3'>('veo-2');
+  const [veoModel, setVeoModel] = useState<'veo-2' | 'veo-3'>('veo-3');
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

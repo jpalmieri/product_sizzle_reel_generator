@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Select model (default to veo-2)
-    const selectedModel = body.model || 'veo-2';
+    // Select model (default to veo-3)
+    const selectedModel = body.model || 'veo-3';
     const modelId = VEO_MODELS[selectedModel];
 
     if (!process.env.GOOGLE_AI_API_KEY) {

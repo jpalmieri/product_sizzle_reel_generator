@@ -107,13 +107,11 @@ VISUAL STORYTELLING:
 - Authentic settings: modest homes, community centers, truck stops, training facilities, highways
 - Technical cinematography details for AI generation: f-stop, focal length, lighting direction
 
-For CINEMATIC shots, make the video prompts extremely detailed and motion-focused, including:
-
-VIDEO PRODUCTION GUIDELINES:
-- Duration: 3-8 seconds per shot for sizzle reel pacing
+VIDEO PRODUCTION GUIDELINES (IMPORTANT - ALL VIDEOS ARE 8 SECONDS):
+- All generated videos will be exactly 8 seconds long
+- Structure video prompts with TIMESTAMPS to control pacing and action timing
+- Include specific timing for when key actions and emotional beats occur (e.g., "0:00-0:02 - character looks at phone, 0:02-0:05 - types message, 0:05-0:08 - smiles and looks up")
 - Camera movements: smooth dolly, crane, handheld, slider, gimbal movements
-- Pacing: slow, contemplative moments vs dynamic action sequences as appropriate
-- Timing: specific beats when key actions or emotions occur
 - Transitions: how the shot should begin and end to flow into next shot
 - Motion blur and depth changes throughout the sequence
 
@@ -137,7 +135,9 @@ STYLE GUARDRAILS (CRITICAL):
 - Neutral Rec.709 color grading - professional broadcast standard
 - NO glam filters, Instagram-style effects, or beauty enhancement
 - NO brand logos, product placement, or corporate branding visible
-- NO lip-sync mouth shapes or exaggerated facial expressions
+- NO dialogue, speech, talking, or lip-sync mouth movements
+- NO audio, sound effects, music, or any sound generation
+- Characters should NOT be speaking, singing, or making verbal sounds
 - NO extra fingers, body warping, or anatomical distortions
 - NO harsh, stylized color grading or heavy post-processing effects
 - NO text overlays, subtitles, or graphics in the shots

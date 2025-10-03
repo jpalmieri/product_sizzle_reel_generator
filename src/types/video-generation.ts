@@ -6,11 +6,12 @@ export interface VideoGenerationRequest {
   shotId: string;
   imageUrl: string; // base64 data URL of the still image
   prompt: string; // motion/video prompt describing the desired animation
-  model?: 'veo-2' | 'veo-3'; // Which Veo model to use (default: veo-2)
+  model?: 'veo-2' | 'veo-3'; // Which Veo model to use (default: veo-3)
 }
 
 /**
  * Response from video generation API containing the generated video.
+ * Videos are always 8 seconds long (Veo default).
  */
 export interface VideoGenerationResponse {
   shotId: string;
