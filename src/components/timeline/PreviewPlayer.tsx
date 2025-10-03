@@ -31,16 +31,14 @@ export function PreviewPlayer({
   const { items: shotTimeline, totalDuration } = useTimeline(shots);
   const currentShot = shotTimeline[currentShotIndex];
 
-  // Get video URL for current shot (only cinematic shots for now)
-  const videoUrl = currentShot.shot.shotType === 'cinematic'
-    ? generatedVideos[currentShot.shot.id]?.videoUrl
-    : undefined;
+  // Get video URL for current shot (cinematic or extracted UI clips)
+  const videoUrl = generatedVideos[currentShot.shot.id]?.videoUrl;
 
   const hasVideo = !!videoUrl;
 
   // Check if ANY shot has a video (for enabling controls)
   const hasAnyVideo = shotTimeline.some(({ shot }) =>
-    shot.shotType === 'cinematic' && !!generatedVideos[shot.id]
+    !!generatedVideos[shot.id]
   );
 
   // Check if we have any narration audio

@@ -28,6 +28,7 @@ export default function Home() {
   const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
   const [generatedVideos, setGeneratedVideos] = useState<Record<string, VideoGenerationResponse>>({});
   const [generatingVideos, setGeneratingVideos] = useState<Record<string, boolean>>({});
+  const [extractingClips, setExtractingClips] = useState<Record<string, boolean>>({});
   const [veoModel, setVeoModel] = useState<'veo-2' | 'veo-3'>('veo-3');
   const [generatedNarration, setGeneratedNarration] = useState<Record<string, NarrationGenerationResponse>>({});
   const [generatingNarration, setGeneratingNarration] = useState<Record<string, boolean>>({});
@@ -157,6 +158,15 @@ export default function Home() {
       const result: StoryboardResponse = await response.json();
       setStoryboard(result);
       setGeneratedImages({}); // Clear previous images when new storyboard is generated
+      setGeneratedVideos({}); // Clear previous videos when new storyboard is generated
+
+      // Automatically extract UI clips if video is available
+      if (videoFile) {
+        const uiShots = result.shots.filter(shot => shot.shotType === 'ui');
+        for (const shot of uiShots) {
+          handleExtractClip(shot.id, shot.startTime, shot.endTime);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -237,6 +247,44 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Failed to generate video");
     } finally {
       setGeneratingVideos(prev => ({ ...prev, [shotId]: false }));
+    }
+  };
+
+  const handleExtractClip = async (shotId: string, startTime: number, endTime: number) => {
+    if (!videoFile) {
+      setError("No video file uploaded");
+      return;
+    }
+
+    setExtractingClips(prev => ({ ...prev, [shotId]: true }));
+    setError(null);
+
+    try {
+      const response = await fetch("/api/video/extract", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          shotId,
+          videoData: videoFile,
+          startTime,
+          endTime,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to extract clip");
+      }
+
+      const result = await response.json();
+      // Store extracted clip in generatedVideos like cinematic videos
+      setGeneratedVideos(prev => ({ ...prev, [shotId]: { videoUrl: result.videoUrl } as any }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to extract clip");
+    } finally {
+      setExtractingClips(prev => ({ ...prev, [shotId]: false }));
     }
   };
 
@@ -462,17 +510,38 @@ export default function Home() {
 
                         {videoFile && (
                           <div className="border rounded-lg p-4 bg-background max-w-md">
-                            <video
-                              src={`${videoFile}#t=${shot.startTime},${shot.endTime}`}
-                              controls
-                              className="w-full h-auto rounded-md"
-                              preload="metadata"
-                            >
-                              Your browser does not support the video tag.
-                            </video>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Video clip: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
-                            </p>
+                            {generatedVideos[shot.id] ? (
+                              <>
+                                <video
+                                  src={generatedVideos[shot.id].videoUrl}
+                                  controls
+                                  className="w-full h-auto rounded-md"
+                                >
+                                  Your browser does not support the video tag.
+                                </video>
+                                <p className="text-xs text-green-600 mt-2">
+                                  ✓ Extracted clip ready
+                                </p>
+                              </>
+                            ) : extractingClips[shot.id] ? (
+                              <div className="aspect-video flex items-center justify-center bg-muted rounded-md">
+                                <p className="text-sm text-muted-foreground">Extracting clip...</p>
+                              </div>
+                            ) : (
+                              <>
+                                <video
+                                  src={`${videoFile}#t=${shot.startTime},${shot.endTime}`}
+                                  controls
+                                  className="w-full h-auto rounded-md"
+                                  preload="metadata"
+                                >
+                                  Your browser does not support the video tag.
+                                </video>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Preview: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
+                                </p>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
