@@ -10,6 +10,7 @@ import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
 import type { VideoAnalysisResponse } from "@/types/video-analysis";
 import type { VideoGenerationResponse } from "@/types/video-generation";
+import type { NarrationGenerationResponse } from "@/types/narration";
 
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
@@ -26,6 +27,8 @@ export default function Home() {
   const [generatedVideos, setGeneratedVideos] = useState<Record<string, VideoGenerationResponse>>({});
   const [generatingVideos, setGeneratingVideos] = useState<Record<string, boolean>>({});
   const [veoModel, setVeoModel] = useState<'veo-2' | 'veo-3'>('veo-3');
+  const [generatedNarration, setGeneratedNarration] = useState<Record<string, NarrationGenerationResponse>>({});
+  const [generatingNarration, setGeneratingNarration] = useState<Record<string, boolean>>({});
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -233,6 +236,36 @@ export default function Home() {
     }
   };
 
+  const handleGenerateNarration = async (narrationId: string, text: string) => {
+    setGeneratingNarration(prev => ({ ...prev, [narrationId]: true }));
+    setError(null);
+
+    try {
+      const response = await fetch("/api/narration/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          narrationId,
+          text,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate narration");
+      }
+
+      const result: NarrationGenerationResponse = await response.json();
+      setGeneratedNarration(prev => ({ ...prev, [narrationId]: result }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate narration");
+    } finally {
+      setGeneratingNarration(prev => ({ ...prev, [narrationId]: false }));
+    }
+  };
+
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto space-y-8">
@@ -342,6 +375,46 @@ export default function Home() {
               <CardDescription>{storyboard.description}</CardDescription>
             </CardHeader>
             <CardContent>
+              {storyboard.narration && storyboard.narration.length > 0 && (
+                <div className="mb-8 p-4 bg-muted rounded-lg">
+                  <h3 className="text-lg font-semibold mb-4">Voiceover Narration</h3>
+                  <div className="space-y-4">
+                    {storyboard.narration.map((segment) => (
+                      <div key={segment.id} className="border-l-2 border-blue-500 pl-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="font-mono">{segment.startTime.toFixed(1)}s - {segment.endTime.toFixed(1)}s</span>
+                          </div>
+                        </div>
+                        <p className="text-sm italic">&quot;{segment.text}&quot;</p>
+                        <div className="flex items-center gap-3">
+                          <Button
+                            onClick={() => handleGenerateNarration(segment.id, segment.text)}
+                            disabled={generatingNarration[segment.id]}
+                            size="sm"
+                            variant="outline"
+                          >
+                            {generatingNarration[segment.id] ? "Generating..." : "Generate Audio"}
+                          </Button>
+                          {generatedNarration[segment.id] && (
+                            <audio
+                              src={generatedNarration[segment.id].audioUrl}
+                              controls
+                              className="h-8"
+                            />
+                          )}
+                        </div>
+                        {generatedNarration[segment.id] && (
+                          <p className="text-xs text-muted-foreground">
+                            Generated in {generatedNarration[segment.id].processingTimeMs}ms
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-6">
                 {storyboard.shots.map((shot) => (
                   <div key={shot.id} className="border-l-2 border-primary pl-4 space-y-4">

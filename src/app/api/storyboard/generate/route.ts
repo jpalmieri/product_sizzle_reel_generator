@@ -87,6 +87,20 @@ Return your response as a JSON object with this exact structure:
       "endTime": 10.5,
       "order": 2
     }
+  ],
+  "narration": [
+    {
+      "id": "narration-1",
+      "text": "Professional voiceover script (conversational, compelling, 1-3 sentences)",
+      "startTime": 0,
+      "endTime": 5
+    },
+    {
+      "id": "narration-2",
+      "text": "Next narration segment...",
+      "startTime": 5,
+      "endTime": 10
+    }
   ]
 }
 
@@ -143,7 +157,19 @@ STYLE GUARDRAILS (CRITICAL):
 - NO text overlays, subtitles, or graphics in the shots
 
 NARRATIVE ARC REQUIREMENTS:
-Each shot should build upon the previous one to tell a cohesive story that demonstrates this specific product feature's functionality and value. The progression should feel authentic, natural, and focused on showcasing the feature in action. Remember: the Free World context provides setting and authenticity, but the PRIMARY FOCUS is demonstrating the specific feature described in the product description.`;
+Each shot should build upon the previous one to tell a cohesive story that demonstrates this specific product feature's functionality and value. The progression should feel authentic, natural, and focused on showcasing the feature in action. Remember: the Free World context provides setting and authenticity, but the PRIMARY FOCUS is demonstrating the specific feature described in the product description.
+
+NARRATION REQUIREMENTS:
+Create professional voiceover narration segments that flow naturally across the visual timeline:
+- Write 3-6 narration segments that tell the story of this feature
+- Each segment should be 1-3 sentences, conversational and compelling
+- Narration can span multiple shots or be shorter than individual shots
+- Use timing that feels natural - don't force narration to align with shot boundaries
+- Focus on the FEATURE VALUE and user benefit, not just describing what's on screen
+- Conversational tone: like a professional explainer video, not a hard sell
+- Narration should complement visuals, not repeat them
+- Example timing: A sentence might start at 2s (during shot 1) and end at 7s (during shot 2)
+- Total narration should cover key moments but allow breathing room with music-only sections`;
 };
 
 export async function POST(request: NextRequest) {

@@ -20,10 +20,18 @@ export interface UIShot extends BaseShotInfo {
 
 export type StoryboardShot = CinematicShot | UIShot;
 
+export interface NarrationSegment {
+  id: string;
+  text: string; // voiceover script text
+  startTime: number; // when narration starts (in seconds)
+  endTime: number; // when narration ends (in seconds)
+}
+
 export interface StoryboardResponse {
   title: string;
   description: string;
   shots: StoryboardShot[];
+  narration?: NarrationSegment[]; // independent narration timeline
 }
 
 export interface StoryboardGenerationRequest {

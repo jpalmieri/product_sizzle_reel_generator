@@ -6,7 +6,9 @@ An AI-assisted sizzle reel generator for software/app product features. Transfor
 
 - **Frontend**: Next.js 15+ with TypeScript
 - **UI Framework**: Tailwind CSS + shadcn/ui
-- **AI Services**: Google Gemini (video analysis, storyboard, image generation)
+- **AI Services**:
+  - Google Gemini (video analysis, storyboard, image generation, video generation)
+  - ElevenLabs (voiceover narration)
 - **Video Processing**: FFmpeg (planned)
 
 ## Getting Started
@@ -15,7 +17,8 @@ An AI-assisted sizzle reel generator for software/app product features. Transfor
 
 - Node.js 18+
 - npm or yarn
-- Google AI API key (for Gemini)
+- Google AI API key (for Gemini) - Get one at [Google AI Studio](https://aistudio.google.com/app/apikey)
+- ElevenLabs API key (for narration) - Get one at [ElevenLabs](https://elevenlabs.io/)
 
 ### Installation
 
@@ -38,7 +41,11 @@ An AI-assisted sizzle reel generator for software/app product features. Transfor
    cp .env.example .env.local
    ```
 
-   Edit `.env.local` and add your Google AI API key (this is `GOOGLE_AI_STUDIO_API_KEY` in the SP).
+   Edit `.env.local` and add your API keys:
+   ```
+   GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+   ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+   ```
 
 4. Start the development server:
 
