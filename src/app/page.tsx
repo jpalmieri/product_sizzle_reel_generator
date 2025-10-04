@@ -13,6 +13,7 @@ import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
 import { Timeline } from "@/components/timeline/Timeline";
 import { PreviewPlayer } from "@/components/timeline/PreviewPlayer";
+import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
 
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
@@ -34,6 +35,7 @@ export default function Home() {
   const [generatingNarration, setGeneratingNarration] = useState<Record<string, boolean>>({});
   const [previewTime, setPreviewTime] = useState(0);
   const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -441,220 +443,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {storyboard && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{storyboard.title}</CardTitle>
-              <CardDescription>{storyboard.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {storyboard.narration && storyboard.narration.length > 0 && (
-                <div className="mb-8 p-4 bg-muted rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Voiceover Narration</h3>
-                  <div className="space-y-4">
-                    {storyboard.narration.map((segment) => (
-                      <div key={segment.id} className="border-l-2 border-blue-500 pl-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="font-mono">{segment.startTime.toFixed(1)}s - {segment.endTime.toFixed(1)}s</span>
-                          </div>
-                        </div>
-                        <p className="text-sm italic">&quot;{segment.text}&quot;</p>
-                        <div className="flex items-center gap-3">
-                          <Button
-                            onClick={() => handleGenerateNarration(segment.id, segment.text)}
-                            disabled={generatingNarration[segment.id]}
-                            size="sm"
-                            variant="outline"
-                          >
-                            {generatingNarration[segment.id] ? "Generating..." : "Generate Audio"}
-                          </Button>
-                          {generatedNarration[segment.id] && (
-                            <audio
-                              src={generatedNarration[segment.id].audioUrl}
-                              controls
-                              className="h-8"
-                            />
-                          )}
-                        </div>
-                        {generatedNarration[segment.id] && (
-                          <p className="text-xs text-muted-foreground">
-                            Generated in {generatedNarration[segment.id].processingTimeMs}ms
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-6">
-                {storyboard.shots.map((shot) => (
-                  <div key={shot.id} className="border-l-2 border-primary pl-4 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-sm font-medium">
-                        Shot {shot.order}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        shot.shotType === 'cinematic'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                      }`}>
-                        {shot.shotType === 'cinematic' ? '🎬 Cinematic' : '📱 UI'}
-                      </span>
-                      <h3 className="font-semibold">{shot.title}</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{shot.description}</p>
-
-                    {shot.shotType === 'cinematic' ? (
-                      <div className="space-y-3">
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-xs text-muted-foreground mb-1">Still Prompt:</p>
-                          <p className="text-sm">{shot.stillPrompt}</p>
-                        </div>
-
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-xs text-muted-foreground mb-1">Video Prompt:</p>
-                          <p className="text-sm">{shot.videoPrompt}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md border border-blue-200 dark:border-blue-800">
-                          <p className="text-xs text-blue-700 dark:text-blue-300 mb-1">UI Screen Recording Clip:</p>
-                          <p className="text-sm font-medium">{shot.uiDescription}</p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Timestamp: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
-                            ({(shot.endTime - shot.startTime).toFixed(1)}s duration)
-                          </p>
-                        </div>
-
-                        {videoFile && (
-                          <div className="border rounded-lg p-4 bg-background max-w-md">
-                            {generatedVideos[shot.id] ? (
-                              <>
-                                <video
-                                  src={generatedVideos[shot.id].videoUrl}
-                                  controls
-                                  className="w-full h-auto rounded-md"
-                                >
-                                  Your browser does not support the video tag.
-                                </video>
-                                <p className="text-xs text-green-600 mt-2">
-                                  ✓ Extracted clip ready
-                                </p>
-                              </>
-                            ) : extractingClips[shot.id] ? (
-                              <div className="aspect-video flex items-center justify-center bg-muted rounded-md">
-                                <p className="text-sm text-muted-foreground">Extracting clip...</p>
-                              </div>
-                            ) : (
-                              <>
-                                <video
-                                  src={`${videoFile}#t=${shot.startTime},${shot.endTime}`}
-                                  controls
-                                  className="w-full h-auto rounded-md"
-                                  preload="metadata"
-                                >
-                                  Your browser does not support the video tag.
-                                </video>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Preview: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
-                                </p>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {shot.shotType === 'cinematic' && (
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          <Button
-                            onClick={() => handleGenerateStill(shot.id, shot.stillPrompt)}
-                            disabled={generatingImages[shot.id] || !baseImage}
-                            size="sm"
-                          >
-                            {generatingImages[shot.id] ? "Generating..." : "Generate Still"}
-                          </Button>
-                          <div className="space-y-1">
-                            <p className="text-xs text-green-600">
-                              ✅ Will use base image for character appearance
-                            </p>
-                            {!baseImage && (
-                              <p className="text-xs text-red-600">
-                                ⚠️ Base image required before generating stills
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {generatedImages[shot.id] && (
-                          <div className="space-y-3">
-                            <div className="border rounded-lg p-4 bg-background">
-                              <img
-                                src={generatedImages[shot.id].imageUrl}
-                                alt={`Still for ${shot.title}`}
-                                className="w-full h-auto rounded-md"
-                              />
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Generated in {generatedImages[shot.id].processingTimeMs}ms
-                              </p>
-                            </div>
-
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-3">
-                                <Button
-                                  onClick={() => handleGenerateVideo(shot.id, shot.videoPrompt)}
-                                  disabled={generatingVideos[shot.id]}
-                                  size="sm"
-                                  variant="outline"
-                                >
-                                  {generatingVideos[shot.id] ? "Generating Video..." : "Generate Video"}
-                                </Button>
-                                <select
-                                  value={veoModel}
-                                  onChange={(e) => setVeoModel(e.target.value as 'veo-2' | 'veo-3')}
-                                  disabled={generatingVideos[shot.id]}
-                                  className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-                                >
-                                  <option value="veo-2">Veo 2</option>
-                                  <option value="veo-3">Veo 3</option>
-                                </select>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                {generatingVideos[shot.id]
-                                  ? "⏱️ This may take several minutes..."
-                                  : "🎬 Convert still to video clip with motion"}
-                              </p>
-                            </div>
-
-                            {generatedVideos[shot.id] && (
-                              <div className="border rounded-lg p-4 bg-background">
-                                <video
-                                  src={generatedVideos[shot.id].videoUrl}
-                                  controls
-                                  className="w-full h-auto rounded-md"
-                                  preload="metadata"
-                                >
-                                  Your browser does not support the video tag.
-                                </video>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Video generated in {(generatedVideos[shot.id].processingTimeMs / 1000).toFixed(1)}s
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Old storyboard card removed - now using focus-mode editing below timeline */}
 
         {storyboard && (
           <Card>
@@ -662,8 +451,8 @@ export default function Home() {
               <CardTitle>Preview</CardTitle>
               <CardDescription>
                 {Object.keys(generatedVideos).length > 0
-                  ? "Watch your sizzle reel come together"
-                  : "Generate videos to preview your sizzle reel"}
+                  ? "Watch your sizzle reel come together. Click timeline blocks to edit individual shots or narration."
+                  : "Click timeline blocks to edit individual shots or narration"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -689,8 +478,29 @@ export default function Home() {
                   }}
                   generatedVideos={generatedVideos}
                   generatedImages={generatedImages}
+                  selectedBlockId={selectedBlockId}
+                  onSelectBlock={setSelectedBlockId}
                 />
               </div>
+
+              <BlockEditorPanel
+                selectedBlockId={selectedBlockId}
+                storyboard={storyboard}
+                generatedImages={generatedImages}
+                generatingImages={generatingImages}
+                generatedVideos={generatedVideos}
+                generatingVideos={generatingVideos}
+                extractingClips={extractingClips}
+                generatedNarration={generatedNarration}
+                generatingNarration={generatingNarration}
+                videoFile={videoFile}
+                baseImage={baseImage}
+                veoModel={veoModel}
+                onGenerateStill={handleGenerateStill}
+                onGenerateVideo={handleGenerateVideo}
+                onGenerateNarration={handleGenerateNarration}
+                onVeoModelChange={setVeoModel}
+              />
             </CardContent>
           </Card>
         )}
@@ -698,3 +508,4 @@ export default function Home() {
     </MainLayout>
   );
 }
+

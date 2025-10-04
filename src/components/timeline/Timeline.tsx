@@ -10,9 +10,11 @@ interface TimelineProps {
   onSeek?: (time: number) => void;
   generatedVideos?: Record<string, any>;
   generatedImages?: Record<string, any>;
+  selectedBlockId?: string | null;
+  onSelectBlock?: (blockId: string) => void;
 }
 
-export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedVideos = {}, generatedImages = {} }: TimelineProps) {
+export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedVideos = {}, generatedImages = {}, selectedBlockId, onSelectBlock }: TimelineProps) {
   const { items: shotPositions, totalDuration } = useTimeline(shots);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -46,6 +48,7 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
             ? generatedImages[shot.id]?.imageUrl
             : generatedVideos[shot.id]?.videoUrl;
           const hasThumbnail = !!thumbnailUrl;
+          const isSelected = selectedBlockId === shot.id;
 
           const leftPercent = (startTime / totalDuration) * 100;
           const widthPercent = (duration / totalDuration) * 100;
@@ -53,10 +56,14 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
           return (
             <div
               key={shot.id}
-              className="absolute top-0 bottom-0 border-r border-background overflow-hidden"
+              className={`absolute top-0 bottom-0 border-r border-background overflow-hidden cursor-pointer ${isSelected ? 'ring-2 ring-yellow-400 ring-inset z-20' : ''}`}
               style={{
                 left: `${leftPercent}%`,
                 width: `${widthPercent}%`,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectBlock?.(shot.id);
               }}
             >
               {/* Thumbnail background */}
@@ -120,16 +127,21 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
           {narration.map((segment) => {
             const leftPercent = (segment.startTime / totalDuration) * 100;
             const widthPercent = ((segment.endTime - segment.startTime) / totalDuration) * 100;
+            const isSelected = selectedBlockId === segment.id;
 
             return (
               <div
                 key={segment.id}
-                className="absolute top-1 bottom-1 bg-purple-500/70 rounded border border-purple-600"
+                className={`absolute top-1 bottom-1 bg-purple-500/70 rounded border border-purple-600 cursor-pointer ${isSelected ? 'ring-2 ring-yellow-400 z-20' : ''}`}
                 style={{
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`,
                 }}
                 title={segment.text}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectBlock?.(segment.id);
+                }}
               >
                 <div className="px-1 text-xs text-white/90 truncate">
                   {segment.text}
