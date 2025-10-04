@@ -136,16 +136,46 @@ export default function Home() {
     setError(null);
 
     try {
+      // Auto-analyze video first if available and not already analyzed
+      let analysisResult = videoAnalysis;
+      if (videoFile && !videoAnalysis) {
+        setAnalyzingVideo(true);
+        try {
+          const response = await fetch("/api/video/analyze", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              video: videoFile,
+              mimeType: videoMimeType,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to analyze video");
+          }
+
+          analysisResult = await response.json();
+          setVideoAnalysis(analysisResult);
+        } catch (err) {
+          throw new Error(`Video analysis failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+        } finally {
+          setAnalyzingVideo(false);
+        }
+      }
+
       const requestBody: { productDescription: string; videoAnalysis?: VideoAnalysisResponse } = {
         productDescription: productDescription.trim(),
       };
 
       // Include video analysis if available
-      if (videoAnalysis) {
+      if (analysisResult) {
         requestBody.videoAnalysis = {
-          overallDescription: videoAnalysis.overallDescription,
-          duration: videoAnalysis.duration,
-          segments: videoAnalysis.segments,
+          overallDescription: analysisResult.overallDescription,
+          duration: analysisResult.duration,
+          segments: analysisResult.segments,
         };
       }
 
@@ -403,21 +433,12 @@ export default function Home() {
               />
               {videoFile && (
                 <div className="space-y-2">
-                  <div className="border rounded-lg p-3 bg-muted">
-                    <p className="text-sm font-medium">Video uploaded</p>
-                    <p className="text-xs text-muted-foreground">Ready to analyze</p>
-                  </div>
-                  {!videoAnalysis && (
-                    <Button
-                      onClick={handleAnalyzeVideo}
-                      disabled={analyzingVideo}
-                      size="sm"
-                      variant="outline"
-                    >
-                      {analyzingVideo ? "Analyzing video..." : "Analyze Video"}
-                    </Button>
-                  )}
-                  {videoAnalysis && (
+                  {!videoAnalysis ? (
+                    <div className="border rounded-lg p-3 bg-muted">
+                      <p className="text-sm font-medium">Video uploaded</p>
+                      <p className="text-xs text-muted-foreground">Will be analyzed when you generate storyboard</p>
+                    </div>
+                  ) : (
                     <div className="border rounded-lg p-3 bg-green-50 dark:bg-green-950">
                       <p className="text-sm font-medium text-green-900 dark:text-green-100">✓ Video analyzed</p>
                       <p className="text-xs text-green-700 dark:text-green-300">
