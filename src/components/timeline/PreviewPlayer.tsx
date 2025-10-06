@@ -31,6 +31,9 @@ export function PreviewPlayer({
   const { items: shotTimeline, totalDuration } = useTimeline(shots);
   const currentShot = shotTimeline[currentShotIndex];
 
+  // Constants
+  const SEEK_THRESHOLD_SECONDS = 0.5; // Tolerance for audio sync drift before seeking
+
   // Get video URL for current shot (cinematic or extracted UI clips)
   const videoUrl = generatedVideos[currentShot.shot.id]?.videoUrl;
 
@@ -59,44 +62,64 @@ export function PreviewPlayer({
     };
   }, []);
 
+  // Helper: Get or create audio element for a narration segment
+  const getOrCreateAudio = (segment: NarrationSegment): HTMLAudioElement | null => {
+    const audioUrl = generatedNarration[segment.id]?.audioUrl;
+    if (!audioUrl) return null;
+
+    let audio = audioRefs.current.get(segment.id);
+    if (!audio) {
+      audio = new Audio(audioUrl);
+      audioRefs.current.set(segment.id, audio);
+    }
+    return audio;
+  };
+
+  // Helper: Sync audio element to current timeline position
+  const syncAudioToTimeline = (
+    audio: HTMLAudioElement,
+    segment: NarrationSegment
+  ) => {
+    const timeIntoSegment = currentTime - segment.startTime;
+    const isInTimeRange = currentTime >= segment.startTime && currentTime < segment.endTime;
+    const audioIsPlaying = !audio.paused;
+
+    // Check if we've moved past the actual audio duration
+    // This prevents trying to play beyond what exists in the audio file
+    const audioDuration = audio.duration;
+    const hasAudioFinished = !isNaN(audioDuration) && timeIntoSegment >= audioDuration;
+
+    // Should this audio be playing right now?
+    if (isPlaying && isInTimeRange && !hasAudioFinished) {
+      const drift = Math.abs(audio.currentTime - timeIntoSegment);
+
+      // Sync audio position if it's drifted too far
+      if (drift > SEEK_THRESHOLD_SECONDS) {
+        audio.currentTime = timeIntoSegment;
+      }
+
+      // Start playing if not already
+      if (!audioIsPlaying) {
+        audio.play().catch(() => {
+          // Ignore auto-play errors
+        });
+      }
+    }
+    // Should this audio be paused right now?
+    else if (audioIsPlaying) {
+      audio.pause();
+    }
+  };
+
   // Handle narration audio playback based on currentTime
   useEffect(() => {
     if (!narration || narration.length === 0) return;
 
     narration.forEach((segment) => {
-      const audioUrl = generatedNarration[segment.id]?.audioUrl;
-      if (!audioUrl) return;
+      const audio = getOrCreateAudio(segment);
+      if (!audio) return;
 
-      // Get or create audio element
-      let audio = audioRefs.current.get(segment.id);
-      if (!audio) {
-        audio = new Audio(audioUrl);
-        audioRefs.current.set(segment.id, audio);
-      }
-
-      const isInTimeRange = currentTime >= segment.startTime;
-      const isPlaying_local = !audio.paused;
-
-      if (isPlaying && isInTimeRange) {
-        // Calculate position within the narration segment
-        const timeIntoNarration = currentTime - segment.startTime;
-        const currentAudioTime = audio.currentTime;
-
-        // Only seek if we're more than 0.5s off (avoid constant seeking during normal playback)
-        if (Math.abs(currentAudioTime - timeIntoNarration) > 0.5) {
-          audio.currentTime = timeIntoNarration;
-        }
-
-        // Start playing if we should and aren't already
-        if (!isPlaying_local) {
-          audio.play().catch(() => {
-            // Ignore playback errors
-          });
-        }
-      } else if (isPlaying_local && currentTime < segment.startTime) {
-        // Only pause if we're before the start time (haven't reached this narration yet)
-        audio.pause();
-      }
+      syncAudioToTimeline(audio, segment);
     });
   }, [currentTime, isPlaying, narration, generatedNarration]);
 
