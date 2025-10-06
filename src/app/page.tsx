@@ -499,17 +499,18 @@ export default function Home() {
             <CardHeader>
               <CardTitle>Preview</CardTitle>
               <CardDescription>
-                {Object.keys(generatedVideos).length > 0
+                {Object.keys(generatedVideos).length > 0 || Object.keys(generatedImages).length > 0
                   ? "Watch your sizzle reel come together. Click timeline blocks to edit individual shots or narration."
                   : "Click timeline blocks to edit individual shots or narration"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {timeline && Object.keys(generatedVideos).length > 0 && (
+              {timeline && (Object.keys(generatedVideos).length > 0 || Object.keys(generatedImages).length > 0) && (
                 <PreviewPlayerV2
                   timeline={timeline}
                   shots={shotsLookup}
                   generatedVideos={generatedVideos}
+                  generatedImages={generatedImages}
                   generatedNarration={generatedNarration}
                   onTimeUpdate={setPreviewTime}
                   seekTime={seekTime}

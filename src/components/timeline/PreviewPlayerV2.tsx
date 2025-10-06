@@ -11,6 +11,7 @@ interface PreviewPlayerV2Props {
   timeline: TimelineType;
   shots: Record<string, StoryboardShot>;
   generatedVideos: Record<string, { videoUrl: string }>;
+  generatedImages: Record<string, { imageUrl: string }>;
   generatedNarration: Record<string, { audioUrl: string }>;
   onTimeUpdate?: (time: number) => void;
   seekTime?: number;
@@ -20,6 +21,7 @@ export function PreviewPlayerV2({
   timeline,
   shots,
   generatedVideos,
+  generatedImages,
   generatedNarration,
   onTimeUpdate,
   seekTime,
@@ -64,6 +66,9 @@ export function PreviewPlayerV2({
 
   const currentShot = currentVideoClip ? shots[currentVideoClip.shotId] : null;
   const videoUrl = currentShot ? generatedVideos[currentShot.id]?.videoUrl : null;
+  const stillUrl = currentShot?.shotType === 'cinematic'
+    ? generatedImages[currentShot.id]?.imageUrl
+    : null;
 
   // Helper: Get or create audio element
   const getOrCreateAudio = useCallback((clip: AudioClip): HTMLAudioElement | null => {
@@ -233,11 +238,17 @@ export function PreviewPlayerV2({
             className="max-h-full max-w-full object-contain"
             muted
           />
+        ) : stillUrl ? (
+          <img
+            src={stillUrl}
+            alt={`Shot ${currentShot?.order}: ${currentShot?.title}`}
+            className="max-h-full max-w-full object-contain"
+          />
         ) : (
           <div className="text-center space-y-2">
             <p className="text-muted-foreground font-medium">
               {currentShot?.shotType === 'cinematic'
-                ? 'Generate video for this shot to preview'
+                ? 'Generate still or video for this shot to preview'
                 : 'No video clip at this time'}
             </p>
           </div>

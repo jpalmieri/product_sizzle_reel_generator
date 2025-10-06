@@ -112,6 +112,8 @@ export function TimelineV2({
                 e.stopPropagation();
                 // Pass the shot ID (not clip ID) for editor compatibility
                 onSelectClip?.(shot.id);
+                // Seek to shot's start time to show it in preview
+                onSeek?.(clip.startTime);
               }}
             >
               {/* Thumbnail background */}
