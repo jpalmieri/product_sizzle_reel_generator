@@ -39,6 +39,7 @@ export default function Home() {
   const [previewTime, setPreviewTime] = useState(0);
   const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false);
 
   // Create shots lookup for timeline components
   const shotsLookup = storyboard?.shots.reduce((acc, shot) => {
@@ -211,6 +212,9 @@ export default function Home() {
       setGeneratedImages({}); // Clear previous images when new storyboard is generated
       setGeneratedVideos({}); // Clear previous videos when new storyboard is generated
       setGeneratedNarration({}); // Clear previous narration when new storyboard is generated
+
+      // Collapse input section after successful generation
+      setIsInputSectionCollapsed(true);
 
       // Automatically extract UI clips if video is available
       if (videoFile) {
@@ -417,12 +421,27 @@ export default function Home() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Generate Storyboard</CardTitle>
-            <CardDescription>
-              Describe your product and we&apos;ll create a cinematic storyboard for your sizzle reel
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Generate Storyboard</CardTitle>
+                {!isInputSectionCollapsed && (
+                  <CardDescription>
+                    Describe your product and we&apos;ll create a cinematic storyboard for your sizzle reel
+                  </CardDescription>
+                )}
+              </div>
+              {storyboard && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
+                >
+                  {isInputSectionCollapsed ? 'Edit Inputs' : 'Collapse'}
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className={`space-y-4 ${isInputSectionCollapsed ? 'hidden' : ''}`}>
             <div className="space-y-2">
               <label className="text-sm font-medium">Product Description</label>
               <Textarea
@@ -496,6 +515,33 @@ export default function Home() {
               {loading ? "Generating..." : "Generate Storyboard"}
             </Button>
           </CardContent>
+          {isInputSectionCollapsed && storyboard && (
+            <CardContent className="!block">
+              <div className="space-y-2">
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex-1">
+                    <p className="text-muted-foreground">
+                      <span className="font-medium text-foreground">Product:</span>{' '}
+                      {productDescription.slice(0, 100)}
+                      {productDescription.length > 100 && '...'}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleGenerateStoryboard}
+                    disabled={loading}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Regenerate
+                  </Button>
+                </div>
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  {baseImage && <span>✓ Character image uploaded</span>}
+                  {videoFile && <span>✓ UI recording uploaded</span>}
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {/* Old storyboard card removed - now using focus-mode editing below timeline */}
