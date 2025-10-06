@@ -15,7 +15,7 @@ import type { Timeline as TimelineType } from "@/types/timeline";
 import { TimelineV2 } from "@/components/timeline/TimelineV2";
 import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
 import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
-import { storyboardToTimeline, updateNarrationDuration } from "@/lib/timelineConverter";
+import { storyboardToTimeline, updateNarrationDuration, updateClipPosition } from "@/lib/timelineConverter";
 
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
@@ -530,6 +530,12 @@ export default function Home() {
                     generatedNarration={generatedNarration}
                     selectedClipId={selectedBlockId}
                     onSelectClip={setSelectedBlockId}
+                    onClipPositionChange={(clipId, newStartTime) => {
+                      setTimeline(prevTimeline => {
+                        if (!prevTimeline) return prevTimeline;
+                        return updateClipPosition(prevTimeline, clipId, newStartTime);
+                      });
+                    }}
                   />
                 </div>
               )}

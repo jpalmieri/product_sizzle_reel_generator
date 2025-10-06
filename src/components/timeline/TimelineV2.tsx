@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import type { Timeline as TimelineType, VideoClip, AudioClip } from "@/types/timeline";
 import type { StoryboardShot } from "@/types/storyboard";
 import { useTimelineClips } from "@/hooks/useTimelineClips";
@@ -15,6 +16,7 @@ interface TimelineV2Props {
   generatedNarration?: Record<string, any>;
   selectedClipId?: string | null;
   onSelectClip?: (clipId: string) => void;
+  onClipPositionChange?: (clipId: string, newStartTime: number) => void;
 }
 
 export function TimelineV2({
@@ -27,8 +29,13 @@ export function TimelineV2({
   generatedNarration = {},
   selectedClipId,
   onSelectClip,
+  onClipPositionChange,
 }: TimelineV2Props) {
   const { videoClips, audioClips, totalDuration } = useTimelineClips(timeline);
+  const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartTime, setDragStartTime] = useState(0);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!onSeek) return;
@@ -37,6 +44,29 @@ export function TimelineV2({
     const width = rect.width;
     const time = (x / width) * totalDuration;
     onSeek(Math.max(0, Math.min(time, totalDuration)));
+  };
+
+  const handleClipDragStart = (e: React.MouseEvent<HTMLDivElement>, clip: AudioClip) => {
+    if (!onClipPositionChange) return;
+    e.stopPropagation();
+    setDraggingClipId(clip.id);
+    setDragStartX(e.clientX);
+    setDragStartTime(clip.startTime);
+  };
+
+  const handleClipDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!draggingClipId || !timelineRef.current || !onClipPositionChange) return;
+
+    const rect = timelineRef.current.getBoundingClientRect();
+    const deltaX = e.clientX - dragStartX;
+    const deltaTime = (deltaX / rect.width) * totalDuration;
+    const newStartTime = Math.max(0, Math.min(dragStartTime + deltaTime, totalDuration));
+
+    onClipPositionChange(draggingClipId, newStartTime);
+  };
+
+  const handleClipDragEnd = () => {
+    setDraggingClipId(null);
   };
 
   return (
@@ -138,7 +168,13 @@ export function TimelineV2({
 
       {/* Audio track */}
       {audioClips.length > 0 && (
-        <div className="relative bg-muted/50 rounded w-full h-[40px]">
+        <div
+          ref={timelineRef}
+          className="relative bg-muted/50 rounded w-full h-[40px]"
+          onMouseMove={handleClipDrag}
+          onMouseUp={handleClipDragEnd}
+          onMouseLeave={handleClipDragEnd}
+        >
           <div className="absolute inset-0 flex items-center px-2">
             <span className="text-xs text-muted-foreground font-medium">Audio</span>
           </div>
@@ -160,22 +196,27 @@ export function TimelineV2({
               ? clip.text
               : `${clip.audioType}`;
 
+            const isDragging = draggingClipId === clip.id;
+
             return (
               <div
                 key={clip.id}
-                className={`absolute top-1 bottom-1 ${bgColor} rounded border cursor-pointer ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
+                className={`absolute top-1 bottom-1 ${bgColor} rounded border ${isDragging ? 'cursor-grabbing opacity-80' : 'cursor-grab'} ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
                 style={{
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`,
                 }}
                 title={displayText}
+                onMouseDown={(e) => handleClipDragStart(e, clip)}
                 onClick={(e) => {
-                  e.stopPropagation();
-                  // Pass the source ID (narration ID) for editor compatibility
-                  onSelectClip?.(clip.sourceId);
+                  if (!isDragging) {
+                    e.stopPropagation();
+                    // Pass the source ID (narration ID) for editor compatibility
+                    onSelectClip?.(clip.sourceId);
+                  }
                 }}
               >
-                <div className="px-1 text-xs text-white/90 truncate">
+                <div className="px-1 text-xs text-white/90 truncate pointer-events-none">
                   {displayText}
                 </div>
               </div>
