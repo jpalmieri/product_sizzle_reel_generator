@@ -179,16 +179,27 @@ export function PreviewPlayerV2({
     if (!videoRef.current || !currentVideoClip || !videoUrl) return;
 
     const timeIntoClip = currentTime - currentVideoClip.startTime;
+    const videoIsPlaying = !videoRef.current.paused;
 
     if (isPlaying) {
-      videoRef.current.currentTime = timeIntoClip;
-      videoRef.current.play().catch(() => {
-        // Ignore auto-play errors
-      });
+      // Only seek if drift is significant (avoid constant seeking on every frame)
+      const drift = Math.abs(videoRef.current.currentTime - timeIntoClip);
+
+      if (drift > SEEK_THRESHOLD_SECONDS) {
+        videoRef.current.currentTime = timeIntoClip;
+      }
+
+      if (!videoIsPlaying) {
+        videoRef.current.play().catch(() => {
+          // Ignore auto-play errors
+        });
+      }
     } else {
-      videoRef.current.pause();
+      if (videoIsPlaying) {
+        videoRef.current.pause();
+      }
     }
-  }, [currentVideoClip, currentTime, isPlaying, videoUrl]);
+  }, [currentVideoClip, currentTime, isPlaying, videoUrl, SEEK_THRESHOLD_SECONDS]);
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
