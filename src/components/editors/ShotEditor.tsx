@@ -17,6 +17,7 @@ interface ShotEditorProps {
   veoModel: 'veo-2' | 'veo-3';
   onGenerateStill: (shotId: string, prompt: string) => void;
   onGenerateVideo: (shotId: string, prompt: string) => void;
+  onExtractClip: (shotId: string, startTime: number, endTime: number) => void;
   onVeoModelChange: (model: 'veo-2' | 'veo-3') => void;
 }
 
@@ -32,6 +33,7 @@ export function ShotEditor({
   veoModel,
   onGenerateStill,
   onGenerateVideo,
+  onExtractClip,
   onVeoModelChange,
 }: ShotEditorProps) {
   return (
@@ -145,7 +147,7 @@ export function ShotEditor({
           </div>
 
           {videoFile && (
-            <div className="border rounded-lg p-4 bg-background max-w-md">
+            <div className="border rounded-lg p-4 bg-background max-w-md space-y-3">
               {generatedVideo ? (
                 <>
                   <video
@@ -155,9 +157,17 @@ export function ShotEditor({
                   >
                     Your browser does not support the video tag.
                   </video>
-                  <p className="text-xs text-green-600 mt-2">
+                  <p className="text-xs text-green-600">
                     ✓ Extracted clip ready
                   </p>
+                  <Button
+                    onClick={() => onExtractClip(shot.id, shot.startTime, shot.endTime)}
+                    disabled={extractingClip}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Re-extract Clip
+                  </Button>
                 </>
               ) : extractingClip ? (
                 <div className="aspect-video flex items-center justify-center bg-muted rounded-md">
@@ -173,9 +183,17 @@ export function ShotEditor({
                   >
                     Your browser does not support the video tag.
                   </video>
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-xs text-muted-foreground">
                     Preview: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
                   </p>
+                  <Button
+                    onClick={() => onExtractClip(shot.id, shot.startTime, shot.endTime)}
+                    disabled={extractingClip}
+                    variant="default"
+                    size="sm"
+                  >
+                    Extract Clip
+                  </Button>
                 </>
               )}
             </div>

@@ -70,6 +70,11 @@ export function PreviewPlayerV2({
     ? generatedImages[currentShot.id]?.imageUrl
     : null;
 
+  // Debug logging
+  if (currentShot) {
+    console.log('Current shot:', currentShot.id, 'Type:', currentShot.shotType, 'Has video:', !!videoUrl);
+  }
+
   // Helper: Get or create audio element
   const getOrCreateAudio = useCallback((clip: AudioClip): HTMLAudioElement | null => {
     const audioUrl = generatedNarration[clip.sourceId]?.audioUrl;
@@ -186,12 +191,20 @@ export function PreviewPlayerV2({
     const timeIntoClip = currentTime - currentVideoClip.startTime;
     const videoIsPlaying = !videoRef.current.paused;
 
+    // For UI clips (extracted videos), account for trimStart offset
+    // UI clips are extracted from the source video, so they start at 0 in the extracted file
+    // but we need to map timeline time to the extracted clip's internal time
+    const videoTime = currentShot?.shotType === 'ui' && currentVideoClip.trimStart !== undefined
+      ? timeIntoClip  // For extracted clips, timeIntoClip is already correct (relative to clip start)
+      : timeIntoClip;
+
     if (isPlaying) {
       // Only seek if drift is significant (avoid constant seeking on every frame)
-      const drift = Math.abs(videoRef.current.currentTime - timeIntoClip);
+      const drift = Math.abs(videoRef.current.currentTime - videoTime);
 
       if (drift > SEEK_THRESHOLD_SECONDS) {
-        videoRef.current.currentTime = timeIntoClip;
+        console.log('Seeking video to:', videoTime, 'Current:', videoRef.current.currentTime, 'Drift:', drift);
+        videoRef.current.currentTime = videoTime;
       }
 
       if (!videoIsPlaying) {
@@ -204,7 +217,7 @@ export function PreviewPlayerV2({
         videoRef.current.pause();
       }
     }
-  }, [currentVideoClip, currentTime, isPlaying, videoUrl, SEEK_THRESHOLD_SECONDS]);
+  }, [currentVideoClip, currentTime, isPlaying, videoUrl, currentShot, SEEK_THRESHOLD_SECONDS]);
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);

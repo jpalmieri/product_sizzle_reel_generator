@@ -347,9 +347,15 @@ export default function Home() {
       }
 
       const result = await response.json();
+      console.log('Extraction successful for shot:', shotId, 'Duration:', result.duration);
       // Store extracted clip in generatedVideos like cinematic videos
-      setGeneratedVideos(prev => ({ ...prev, [shotId]: { videoUrl: result.videoUrl } as any }));
+      setGeneratedVideos(prev => {
+        const updated = { ...prev, [shotId]: { videoUrl: result.videoUrl } as any };
+        console.log('Updated generatedVideos:', Object.keys(updated));
+        return updated;
+      });
     } catch (err) {
+      console.error('Extraction error:', err);
       setError(err instanceof Error ? err.message : "Failed to extract clip");
     } finally {
       setExtractingClips(prev => ({ ...prev, [shotId]: false }));
@@ -557,6 +563,7 @@ export default function Home() {
                 veoModel={veoModel}
                 onGenerateStill={handleGenerateStill}
                 onGenerateVideo={handleGenerateVideo}
+                onExtractClip={handleExtractClip}
                 onGenerateNarration={handleGenerateNarration}
                 onVeoModelChange={setVeoModel}
               />

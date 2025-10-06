@@ -22,6 +22,7 @@ interface BlockEditorPanelProps {
   veoModel: 'veo-2' | 'veo-3';
   onGenerateStill: (shotId: string, prompt: string) => void;
   onGenerateVideo: (shotId: string, prompt: string) => void;
+  onExtractClip: (shotId: string, startTime: number, endTime: number) => void;
   onGenerateNarration: (narrationId: string, text: string) => void;
   onVeoModelChange: (model: 'veo-2' | 'veo-3') => void;
 }
@@ -41,6 +42,7 @@ export function BlockEditorPanel({
   veoModel,
   onGenerateStill,
   onGenerateVideo,
+  onExtractClip,
   onGenerateNarration,
   onVeoModelChange,
 }: BlockEditorPanelProps) {
@@ -65,6 +67,7 @@ export function BlockEditorPanel({
           veoModel={veoModel}
           onGenerateStill={onGenerateStill}
           onGenerateVideo={onGenerateVideo}
+          onExtractClip={onExtractClip}
           onVeoModelChange={onVeoModelChange}
         />
       </div>
