@@ -48,6 +48,15 @@ export function PreviewPlayerV2({
     };
   }, []);
 
+  // Clear audio cache when generatedNarration changes (e.g., new storyboard)
+  useEffect(() => {
+    audioRefs.current.forEach((audio) => {
+      audio.pause();
+      audio.src = '';
+    });
+    audioRefs.current.clear();
+  }, [generatedNarration]);
+
   // Find current video clip
   const currentVideoClip = videoClips.find(
     clip => isVideoClip(clip) && currentTime >= clip.startTime && currentTime < (clip.startTime + clip.duration)

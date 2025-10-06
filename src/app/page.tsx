@@ -210,6 +210,7 @@ export default function Home() {
 
       setGeneratedImages({}); // Clear previous images when new storyboard is generated
       setGeneratedVideos({}); // Clear previous videos when new storyboard is generated
+      setGeneratedNarration({}); // Clear previous narration when new storyboard is generated
 
       // Automatically extract UI clips if video is available
       if (videoFile) {
