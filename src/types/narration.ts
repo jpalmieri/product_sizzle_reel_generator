@@ -15,6 +15,7 @@ export interface NarrationGenerationResponse {
   narrationId: string;
   audioUrl: string; // base64 data URL of the generated audio
   text: string;
+  durationSeconds: number; // actual duration of the generated audio file
   processingTimeMs: number;
   timestamp: string;
 }

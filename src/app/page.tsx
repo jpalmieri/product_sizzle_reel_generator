@@ -378,6 +378,19 @@ export default function Home() {
 
       const result: NarrationGenerationResponse = await response.json();
       setGeneratedNarration(prev => ({ ...prev, [narrationId]: result }));
+
+      // Load audio to get actual duration and update timeline
+      const audio = new Audio(result.audioUrl);
+      audio.addEventListener('loadedmetadata', () => {
+        const actualDuration = audio.duration;
+
+        // Update timeline with actual audio duration
+        setTimeline(prevTimeline => {
+          if (!prevTimeline) return prevTimeline;
+          return updateNarrationDuration(prevTimeline, narrationId, actualDuration);
+        });
+      });
+      audio.load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate narration");
     } finally {

@@ -85,10 +85,18 @@ export async function POST(request: NextRequest) {
     const audioBase64 = Buffer.from(audioBuffer).toString('base64');
     const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
 
+    // Calculate audio duration from MP3 data
+    // We'll estimate based on bitrate and file size as a fallback
+    // Client will load the actual audio to get precise duration
+    const fileSizeBytes = audioBuffer.byteLength;
+    const estimatedBitrateKbps = 128; // ElevenLabs typically uses 128kbps
+    const estimatedDurationSeconds = (fileSizeBytes * 8) / (estimatedBitrateKbps * 1000);
+
     const result: NarrationGenerationResponse = {
       narrationId: body.narrationId,
       audioUrl,
       text: body.text,
+      durationSeconds: estimatedDurationSeconds,
       processingTimeMs,
       timestamp: new Date().toISOString(),
     };
