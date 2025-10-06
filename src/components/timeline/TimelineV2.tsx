@@ -1,0 +1,193 @@
+"use client";
+
+import type { Timeline as TimelineType, VideoClip, AudioClip } from "@/types/timeline";
+import type { StoryboardShot } from "@/types/storyboard";
+import { useTimelineClips } from "@/hooks/useTimelineClips";
+import { isVideoClip, isAudioClip, isNarrationClip } from "@/types/timeline";
+
+interface TimelineV2Props {
+  timeline: TimelineType;
+  shots: Record<string, StoryboardShot>; // Lookup by shot ID
+  currentTime?: number;
+  onSeek?: (time: number) => void;
+  generatedVideos?: Record<string, any>;
+  generatedImages?: Record<string, any>;
+  generatedNarration?: Record<string, any>;
+  selectedClipId?: string | null;
+  onSelectClip?: (clipId: string) => void;
+}
+
+export function TimelineV2({
+  timeline,
+  shots,
+  currentTime = 0,
+  onSeek,
+  generatedVideos = {},
+  generatedImages = {},
+  generatedNarration = {},
+  selectedClipId,
+  onSelectClip,
+}: TimelineV2Props) {
+  const { videoClips, audioClips, totalDuration } = useTimelineClips(timeline);
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onSeek) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    const time = (x / width) * totalDuration;
+    onSeek(Math.max(0, Math.min(time, totalDuration)));
+  };
+
+  return (
+    <div className="space-y-2 w-full max-w-4xl">
+      {/* Time markers */}
+      <div className="relative w-full">
+        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+          {Array.from({ length: Math.ceil(totalDuration / 5) + 1 }).map((_, i) => (
+            <span key={i} className="font-mono">{(i * 5).toFixed(0)}s</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Video track */}
+      <div
+        className="relative bg-muted rounded cursor-pointer w-full h-[60px]"
+        onClick={handleClick}
+      >
+        {videoClips.map((clip) => {
+          if (!isVideoClip(clip)) return null;
+
+          const shot = shots[clip.shotId];
+          if (!shot) return null;
+
+          const thumbnailUrl = shot.shotType === 'cinematic'
+            ? generatedImages[shot.id]?.imageUrl
+            : generatedVideos[shot.id]?.videoUrl;
+          const hasThumbnail = !!thumbnailUrl;
+          const isSelected = selectedClipId === shot.id;
+
+          const leftPercent = (clip.startTime / totalDuration) * 100;
+          const widthPercent = (clip.duration / totalDuration) * 100;
+
+          return (
+            <div
+              key={clip.id}
+              className={`absolute top-0 bottom-0 border-r border-background overflow-hidden cursor-pointer ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
+              style={{
+                left: `${leftPercent}%`,
+                width: `${widthPercent}%`,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Pass the shot ID (not clip ID) for editor compatibility
+                onSelectClip?.(shot.id);
+              }}
+            >
+              {/* Thumbnail background */}
+              {hasThumbnail ? (
+                shot.shotType === 'cinematic' ? (
+                  <img
+                    src={thumbnailUrl}
+                    alt={`Shot ${shot.order}`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    src={thumbnailUrl}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                )
+              ) : (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: shot.shotType === 'cinematic'
+                      ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                      : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    opacity: 0.5,
+                  }}
+                />
+              )}
+
+              {/* Dark overlay for text readability */}
+              <div className="absolute inset-0 bg-black/40" />
+
+              {/* Text content */}
+              <div className="relative p-2 text-xs text-white font-medium truncate">
+                Shot {shot.order}: {shot.title}
+                {!hasThumbnail && ' (not generated)'}
+              </div>
+              <div className="relative absolute bottom-1 right-1 text-xs text-white/90 font-mono">
+                {clip.duration.toFixed(1)}s
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Playhead */}
+        <div
+          className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none"
+          style={{ left: `${Math.min((currentTime / totalDuration) * 100, 100)}%` }}
+        >
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full" />
+        </div>
+      </div>
+
+      {/* Audio track */}
+      {audioClips.length > 0 && (
+        <div className="relative bg-muted/50 rounded w-full h-[40px]">
+          <div className="absolute inset-0 flex items-center px-2">
+            <span className="text-xs text-muted-foreground font-medium">Audio</span>
+          </div>
+          {audioClips.map((clip) => {
+            if (!isAudioClip(clip)) return null;
+
+            const leftPercent = (clip.startTime / totalDuration) * 100;
+            const widthPercent = (clip.duration / totalDuration) * 100;
+            const isSelected = selectedClipId === clip.sourceId;
+
+            // Color based on audio type
+            const bgColor = clip.audioType === 'narration'
+              ? 'bg-purple-500/70 border-purple-600'
+              : clip.audioType === 'music'
+              ? 'bg-blue-500/70 border-blue-600'
+              : 'bg-green-500/70 border-green-600';
+
+            const displayText = isNarrationClip(clip)
+              ? clip.text
+              : `${clip.audioType}`;
+
+            return (
+              <div
+                key={clip.id}
+                className={`absolute top-1 bottom-1 ${bgColor} rounded border cursor-pointer ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
+                style={{
+                  left: `${leftPercent}%`,
+                  width: `${widthPercent}%`,
+                }}
+                title={displayText}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Pass the source ID (narration ID) for editor compatibility
+                  onSelectClip?.(clip.sourceId);
+                }}
+              >
+                <div className="px-1 text-xs text-white/90 truncate">
+                  {displayText}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Total duration */}
+      <div className="text-xs text-muted-foreground text-right font-mono w-full">
+        Total: {totalDuration.toFixed(1)}s
+      </div>
+    </div>
+  );
+}

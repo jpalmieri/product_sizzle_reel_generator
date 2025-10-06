@@ -11,9 +11,11 @@ import type { StillImageResponse } from "@/types/still-image";
 import type { VideoAnalysisResponse } from "@/types/video-analysis";
 import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
-import { Timeline } from "@/components/timeline/Timeline";
-import { PreviewPlayer } from "@/components/timeline/PreviewPlayer";
+import type { Timeline as TimelineType } from "@/types/timeline";
+import { TimelineV2 } from "@/components/timeline/TimelineV2";
+import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
 import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
+import { storyboardToTimeline, updateNarrationDuration } from "@/lib/timelineConverter";
 
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
@@ -23,6 +25,7 @@ export default function Home() {
   const [videoAnalysis, setVideoAnalysis] = useState<VideoAnalysisResponse | null>(null);
   const [analyzingVideo, setAnalyzingVideo] = useState(false);
   const [storyboard, setStoryboard] = useState<StoryboardResponse | null>(null);
+  const [timeline, setTimeline] = useState<TimelineType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<Record<string, StillImageResponse>>({});
@@ -36,6 +39,12 @@ export default function Home() {
   const [previewTime, setPreviewTime] = useState(0);
   const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+
+  // Create shots lookup for timeline components
+  const shotsLookup = storyboard?.shots.reduce((acc, shot) => {
+    acc[shot.id] = shot;
+    return acc;
+  }, {} as Record<string, typeof storyboard.shots[0]>) || {};
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -194,6 +203,11 @@ export default function Home() {
 
       const result: StoryboardResponse = await response.json();
       setStoryboard(result);
+
+      // Convert storyboard to timeline
+      const newTimeline = storyboardToTimeline(result);
+      setTimeline(newTimeline);
+
       setGeneratedImages({}); // Clear previous images when new storyboard is generated
       setGeneratedVideos({}); // Clear previous videos when new storyboard is generated
 
@@ -477,32 +491,35 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {Object.keys(generatedVideos).length > 0 && (
-                <PreviewPlayer
-                shots={storyboard.shots}
-                narration={storyboard.narration}
-                generatedVideos={generatedVideos}
-                generatedNarration={generatedNarration}
-                onTimeUpdate={setPreviewTime}
-                seekTime={seekTime}
-              />
+              {timeline && Object.keys(generatedVideos).length > 0 && (
+                <PreviewPlayerV2
+                  timeline={timeline}
+                  shots={shotsLookup}
+                  generatedVideos={generatedVideos}
+                  generatedNarration={generatedNarration}
+                  onTimeUpdate={setPreviewTime}
+                  seekTime={seekTime}
+                />
               )}
 
-              <div className="flex justify-center">
-                <Timeline
-                  shots={storyboard.shots}
-                  narration={storyboard.narration}
-                  currentTime={previewTime}
-                  onSeek={(time) => {
-                    setSeekTime(time);
-                    setTimeout(() => setSeekTime(undefined), 100);
-                  }}
-                  generatedVideos={generatedVideos}
-                  generatedImages={generatedImages}
-                  selectedBlockId={selectedBlockId}
-                  onSelectBlock={setSelectedBlockId}
-                />
-              </div>
+              {timeline && (
+                <div className="flex justify-center">
+                  <TimelineV2
+                    timeline={timeline}
+                    shots={shotsLookup}
+                    currentTime={previewTime}
+                    onSeek={(time) => {
+                      setSeekTime(time);
+                      setTimeout(() => setSeekTime(undefined), 100);
+                    }}
+                    generatedVideos={generatedVideos}
+                    generatedImages={generatedImages}
+                    generatedNarration={generatedNarration}
+                    selectedClipId={selectedBlockId}
+                    onSelectClip={setSelectedBlockId}
+                  />
+                </div>
+              )}
 
               <BlockEditorPanel
                 selectedBlockId={selectedBlockId}
