@@ -56,7 +56,7 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
           return (
             <div
               key={shot.id}
-              className={`absolute top-0 bottom-0 border-r border-background overflow-hidden cursor-pointer ${isSelected ? 'ring-2 ring-yellow-400 ring-inset z-20' : ''}`}
+              className={`absolute top-0 bottom-0 border-r border-background overflow-hidden cursor-pointer ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
               style={{
                 left: `${leftPercent}%`,
                 width: `${widthPercent}%`,
@@ -111,7 +111,7 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
 
         {/* Playhead */}
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none"
+          className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none"
           style={{ left: `${Math.min((currentTime / totalDuration) * 100, 100)}%` }}
         >
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full" />
@@ -132,7 +132,7 @@ export function Timeline({ shots, narration, currentTime = 0, onSeek, generatedV
             return (
               <div
                 key={segment.id}
-                className={`absolute top-1 bottom-1 bg-purple-500/70 rounded border border-purple-600 cursor-pointer ${isSelected ? 'ring-2 ring-yellow-400 z-20' : ''}`}
+                className={`absolute top-1 bottom-1 bg-purple-500/70 rounded border border-purple-600 cursor-pointer ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
                 style={{
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`,
