@@ -50,7 +50,9 @@ Your storyboard should intelligently mix two types of shots based on what best t
 2. UI SHOTS (from screen recording): Actual product functionality${videoAnalysis ? '' : ' (optional - only if UI recording is provided)'}
    - Show specific UI interactions from the screen recording
    - Include "uiDescription" describing what's shown
-   - Include "startTime" and "endTime" timestamps (in seconds) from the recording
+   - Include "startTime" and "endTime" timestamps (in seconds) indicating which portion of the source recording to extract
+   - IMPORTANT: Choose a meaningful duration (typically 3-8 seconds) to give viewers time to understand the UI interaction
+   - The clip will be extracted from the source recording and shown in the final sizzle reel for its full duration
    - Set "shotType": "ui"
 
 SHOT SELECTION STRATEGY:
@@ -85,7 +87,8 @@ Return your response as a JSON object with this exact structure:
       "uiDescription": "Description of what UI interaction to show",
       "startTime": 5.0,
       "endTime": 10.5,
-      "order": 2
+      "order": 2,
+      "note": "startTime/endTime should span 3-8 seconds to give viewers time to see and understand the UI"
     }
   ],
   "narration": [
