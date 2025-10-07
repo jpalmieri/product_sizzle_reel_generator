@@ -66,36 +66,37 @@ export function ShotEditor({
           </div>
 
           <div className="space-y-3">
+            {/* Buttons: Conditional based on generation state */}
             <div className="space-y-2">
-              <Button
-                onClick={() => onGenerateStill(shot.id, shot.stillPrompt)}
-                disabled={generatingImage || !baseImage}
-                size="sm"
-              >
-                {generatingImage ? "Generating..." : "Generate Still"}
-              </Button>
-            </div>
+              {!generatedImage && !generatedVideo && (
+                // Case 1: Nothing generated
+                <Button
+                  onClick={() => onGenerateStill(shot.id, shot.stillPrompt)}
+                  disabled={generatingImage || !baseImage}
+                  size="sm"
+                  variant="default"
+                >
+                  {generatingImage ? "Generating..." : "Generate Still"}
+                </Button>
+              )}
 
-            {generatedImage && (
-              <div className="space-y-3">
-                <div className="border rounded-lg p-4 bg-background">
-                  <img
-                    src={generatedImage.imageUrl}
-                    alt={`Still for ${shot.title}`}
-                    className="w-full h-auto rounded-md"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Generated in {generatedImage.processingTimeMs}ms
-                  </p>
-                </div>
-
-                <div className="space-y-2">
+              {generatedImage && !generatedVideo && (
+                // Case 2: Still generated, no video
+                <>
+                  <Button
+                    onClick={() => onGenerateStill(shot.id, shot.stillPrompt)}
+                    disabled={generatingImage || !baseImage}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Regenerate Still
+                  </Button>
                   <div className="flex items-center gap-3">
                     <Button
                       onClick={() => onGenerateVideo(shot.id, shot.videoPrompt)}
                       disabled={generatingVideo}
                       size="sm"
-                      variant="outline"
+                      variant="default"
                     >
                       {generatingVideo ? "Generating Video..." : "Generate Video"}
                     </Button>
@@ -108,29 +109,84 @@ export function ShotEditor({
                       <option value="veo-2">Veo 2</option>
                       <option value="veo-3">Veo 3</option>
                     </select>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {generatingVideo
-                      ? "⏱️ This may take several minutes..."
-                      : "🎬 Convert still to video clip with motion"}
-                  </p>
-                </div>
-
-                {generatedVideo && (
-                  <div className="border rounded-lg p-4 bg-background">
-                    <video
-                      src={generatedVideo.videoUrl}
-                      controls
-                      className="w-full h-auto rounded-md"
-                      preload="metadata"
-                    >
-                      Your browser does not support the video tag.
-                    </video>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Video generated in {(generatedVideo.processingTimeMs / 1000).toFixed(1)}s
+                    <p className="text-xs text-muted-foreground">
+                      {generatingVideo ? "⏱️ This may take several minutes..." : "🎬 Model selection"}
                     </p>
                   </div>
-                )}
+                  <p className="text-xs text-muted-foreground">
+                    If you like the still, press Generate Video to create a video based on it
+                  </p>
+                </>
+              )}
+
+              {generatedImage && generatedVideo && (
+                // Case 3: Both generated
+                <>
+                  <Button
+                    onClick={() => onGenerateStill(shot.id, shot.stillPrompt)}
+                    disabled={generatingImage || !baseImage}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Regenerate Still
+                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={() => onGenerateVideo(shot.id, shot.videoPrompt)}
+                      disabled={generatingVideo}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Regenerate Video
+                    </Button>
+                    <select
+                      value={veoModel}
+                      onChange={(e) => onVeoModelChange(e.target.value as 'veo-2' | 'veo-3')}
+                      disabled={generatingVideo}
+                      className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value="veo-2">Veo 2</option>
+                      <option value="veo-3">Veo 3</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      {generatingVideo ? "⏱️ This may take several minutes..." : "🎬 Model selection"}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Display: Show video OR still, not both */}
+            {generatedVideo ? (
+              <div className="border rounded-lg p-4 bg-background">
+                <video
+                  src={generatedVideo.videoUrl}
+                  controls
+                  className="w-full h-auto rounded-md"
+                  preload="metadata"
+                >
+                  Your browser does not support the video tag.
+                </video>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Video generated in {(generatedVideo.processingTimeMs / 1000).toFixed(1)}s
+                </p>
+              </div>
+            ) : generatedImage ? (
+              <div className="border rounded-lg p-4 bg-background">
+                <img
+                  src={generatedImage.imageUrl}
+                  alt={`Still for ${shot.title}`}
+                  className="w-full h-auto rounded-md"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Generated in {generatedImage.processingTimeMs}ms
+                </p>
+              </div>
+            ) : (
+              <div className="border rounded-lg p-4 bg-muted text-center">
+                <p className="text-sm text-muted-foreground">
+                  No still or video generated yet
+                </p>
               </div>
             )}
           </div>
