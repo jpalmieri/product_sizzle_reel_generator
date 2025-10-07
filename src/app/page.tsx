@@ -277,6 +277,13 @@ export default function Home() {
 
       const result: StillImageResponse = await response.json();
       setGeneratedImages(prev => ({ ...prev, [shotId]: result }));
+
+      // Clear any existing video for this shot since the still has changed
+      setGeneratedVideos(prev => {
+        const updated = { ...prev };
+        delete updated[shotId];
+        return updated;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate image");
     } finally {
