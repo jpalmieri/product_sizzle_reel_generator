@@ -351,13 +351,17 @@ export default function Home() {
       }
 
       const result = await response.json();
-      console.log('Extraction successful for shot:', shotId, 'Duration:', result.duration);
       // Store extracted clip in generatedVideos like cinematic videos
-      setGeneratedVideos(prev => {
-        const updated = { ...prev, [shotId]: { videoUrl: result.videoUrl } as any };
-        console.log('Updated generatedVideos:', Object.keys(updated));
-        return updated;
-      });
+      setGeneratedVideos(prev => ({
+        ...prev,
+        [shotId]: {
+          shotId: result.shotId,
+          videoUrl: result.videoUrl,
+          prompt: '',
+          processingTimeMs: result.processingTimeMs,
+          timestamp: result.timestamp
+        }
+      }));
     } catch (err) {
       console.error('Extraction error:', err);
       setError(err instanceof Error ? err.message : "Failed to extract clip");

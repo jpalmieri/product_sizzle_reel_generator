@@ -85,9 +85,11 @@ export async function POST(request: NextRequest) {
     await writeFile(inputPath, videoBuffer);
 
     // Extract clip using FFmpeg
-    // -ss: start time, -to: end time, -c copy: copy codec (fast, no re-encoding)
+    // -ss: start time (before input for faster seeking)
+    // -t: duration to extract
+    // Re-encode to ensure proper video file (instead of -c copy which can cause keyframe issues)
     const duration = body.endTime - body.startTime;
-    const ffmpegCommand = `ffmpeg -i "${inputPath}" -ss ${body.startTime} -to ${body.endTime} -c copy -y "${outputPath}"`;
+    const ffmpegCommand = `ffmpeg -ss ${body.startTime} -i "${inputPath}" -t ${duration} -c:v libx264 -c:a aac -y "${outputPath}"`;
 
     await execAsync(ffmpegCommand);
 
