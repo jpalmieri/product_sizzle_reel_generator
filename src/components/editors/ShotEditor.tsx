@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { StoryboardShot } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
@@ -36,6 +37,15 @@ export function ShotEditor({
   onExtractClip,
   onVeoModelChange,
 }: ShotEditorProps) {
+  const [stillPromptExpanded, setStillPromptExpanded] = useState(false);
+  const [videoPromptExpanded, setVideoPromptExpanded] = useState(false);
+  const [stillPromptEditing, setStillPromptEditing] = useState(false);
+  const [videoPromptEditing, setVideoPromptEditing] = useState(false);
+  const [editedStillPrompt, setEditedStillPrompt] = useState(shot.stillPrompt);
+  const [editedVideoPrompt, setEditedVideoPrompt] = useState(shot.videoPrompt);
+  const [stillPromptModified, setStillPromptModified] = useState(false);
+  const [videoPromptModified, setVideoPromptModified] = useState(false);
+
   return (
     <div className="border-l-4 border-primary pl-6 space-y-4">
       <div className="flex items-center gap-2">
@@ -55,64 +65,227 @@ export function ShotEditor({
 
       {shot.shotType === 'cinematic' ? (
         <div className="space-y-3">
-          <div className="bg-muted p-3 rounded-md">
-            <p className="text-xs text-muted-foreground mb-1">Still Prompt:</p>
-            <p className="text-sm">{shot.stillPrompt}</p>
-          </div>
-
-          <div className="bg-muted p-3 rounded-md">
-            <p className="text-xs text-muted-foreground mb-1">Video Prompt:</p>
-            <p className="text-sm">{shot.videoPrompt}</p>
-          </div>
-
           <div className="space-y-3">
             {/* Buttons: Conditional based on generation state */}
             <div className="space-y-2">
               {!generatedImage && !generatedVideo && (
                 // Case 1: Nothing generated
-                <Button
-                  onClick={() => onGenerateStill(shot.id, shot.stillPrompt)}
-                  disabled={generatingImage || !baseImage}
-                  size="sm"
-                  variant="default"
-                >
-                  {generatingImage ? "Generating..." : "Generate Still"}
-                </Button>
+                <>
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => setStillPromptExpanded(!stillPromptExpanded)}
+                      className="mt-1.5 text-muted-foreground hover:text-foreground transition-transform"
+                      title="View/edit still prompt"
+                    >
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-200 ${stillPromptExpanded ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div className="flex-1">
+                      <Button
+                        onClick={() => onGenerateStill(shot.id, editedStillPrompt)}
+                        disabled={generatingImage || !baseImage}
+                        size="sm"
+                        variant="default"
+                      >
+                        {generatingImage ? "Generating..." : "Generate Still"}
+                      </Button>
+                    </div>
+                  </div>
+                  {stillPromptExpanded && (
+                    <div className="ml-6 bg-muted p-3 rounded-md relative">
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        {stillPromptEditing ? (
+                          <button
+                            onClick={() => {
+                              setStillPromptEditing(false);
+                              setStillPromptExpanded(false);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Done
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setStillPromptEditing(true)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">Still Prompt:</p>
+                      {stillPromptEditing ? (
+                        <textarea
+                          value={editedStillPrompt}
+                          onChange={(e) => {
+                            setEditedStillPrompt(e.target.value);
+                            setStillPromptModified(e.target.value !== shot.stillPrompt);
+                          }}
+                          className="w-full text-sm bg-background border border-input rounded-md p-2 min-h-[100px]"
+                        />
+                      ) : (
+                        <p className="text-sm pr-12">{editedStillPrompt}</p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
 
               {generatedImage && !generatedVideo && (
                 // Case 2: Still generated, no video
                 <>
-                  <Button
-                    onClick={() => onGenerateStill(shot.id, shot.stillPrompt)}
-                    disabled={generatingImage || !baseImage}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Regenerate Still
-                  </Button>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      onClick={() => onGenerateVideo(shot.id, shot.videoPrompt)}
-                      disabled={generatingVideo}
-                      size="sm"
-                      variant="default"
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => setStillPromptExpanded(!stillPromptExpanded)}
+                      className="mt-1.5 text-muted-foreground hover:text-foreground transition-transform"
+                      title="View/edit still prompt"
                     >
-                      {generatingVideo ? "Generating Video..." : "Generate Video"}
-                    </Button>
-                    <select
-                      value={veoModel}
-                      onChange={(e) => onVeoModelChange(e.target.value as 'veo-2' | 'veo-3')}
-                      disabled={generatingVideo}
-                      className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-                    >
-                      <option value="veo-2">Veo 2</option>
-                      <option value="veo-3">Veo 3</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground">
-                      {generatingVideo ? "⏱️ This may take several minutes..." : "🎬 Model selection"}
-                    </p>
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-200 ${stillPromptExpanded ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div className="flex-1">
+                      <Button
+                        onClick={() => {
+                          onGenerateStill(shot.id, editedStillPrompt);
+                          setStillPromptModified(false);
+                        }}
+                        disabled={generatingImage || !baseImage}
+                        size="sm"
+                        variant={stillPromptModified ? "default" : "outline"}
+                      >
+                        {stillPromptModified ? "Generate Still" : "Regenerate Still"}
+                      </Button>
+                    </div>
                   </div>
+                  {stillPromptExpanded && (
+                    <div className="ml-6 bg-muted p-3 rounded-md relative">
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        {stillPromptEditing ? (
+                          <button
+                            onClick={() => {
+                              setStillPromptEditing(false);
+                              setStillPromptExpanded(false);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Done
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setStillPromptEditing(true)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">Still Prompt:</p>
+                      {stillPromptEditing ? (
+                        <textarea
+                          value={editedStillPrompt}
+                          onChange={(e) => {
+                            setEditedStillPrompt(e.target.value);
+                            setStillPromptModified(e.target.value !== shot.stillPrompt);
+                          }}
+                          className="w-full text-sm bg-background border border-input rounded-md p-2 min-h-[100px]"
+                        />
+                      ) : (
+                        <p className="text-sm pr-12">{editedStillPrompt}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => setVideoPromptExpanded(!videoPromptExpanded)}
+                      className="mt-1.5 text-muted-foreground hover:text-foreground transition-transform"
+                      title="View/edit video prompt"
+                    >
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-200 ${videoPromptExpanded ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div className="flex-1 flex items-center gap-3">
+                      <Button
+                        onClick={() => {
+                          onGenerateVideo(shot.id, editedVideoPrompt);
+                          setVideoPromptModified(false);
+                        }}
+                        disabled={generatingVideo}
+                        size="sm"
+                        variant="default"
+                      >
+                        {generatingVideo ? "Generating Video..." : "Generate Video"}
+                      </Button>
+                      <select
+                        value={veoModel}
+                        onChange={(e) => onVeoModelChange(e.target.value as 'veo-2' | 'veo-3')}
+                        disabled={generatingVideo}
+                        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="veo-2">Veo 2</option>
+                        <option value="veo-3">Veo 3</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">
+                        {generatingVideo ? "⏱️ This may take several minutes..." : "🎬 Model selection"}
+                      </p>
+                    </div>
+                  </div>
+                  {videoPromptExpanded && (
+                    <div className="ml-6 bg-muted p-3 rounded-md relative">
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        {videoPromptEditing ? (
+                          <button
+                            onClick={() => {
+                              setVideoPromptEditing(false);
+                              setVideoPromptExpanded(false);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Done
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setVideoPromptEditing(true)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">Video Prompt:</p>
+                      {videoPromptEditing ? (
+                        <textarea
+                          value={editedVideoPrompt}
+                          onChange={(e) => {
+                            setEditedVideoPrompt(e.target.value);
+                            setVideoPromptModified(e.target.value !== shot.videoPrompt);
+                          }}
+                          className="w-full text-sm bg-background border border-input rounded-md p-2 min-h-[100px]"
+                        />
+                      ) : (
+                        <p className="text-sm pr-12">{editedVideoPrompt}</p>
+                      )}
+                    </div>
+                  )}
+
                   <p className="text-xs text-muted-foreground">
                     If you like the still, press Generate Video to create a video based on it
                   </p>
@@ -122,36 +295,151 @@ export function ShotEditor({
               {generatedImage && generatedVideo && (
                 // Case 3: Both generated
                 <>
-                  <Button
-                    onClick={() => onGenerateStill(shot.id, shot.stillPrompt)}
-                    disabled={generatingImage || !baseImage}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Regenerate Still
-                  </Button>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      onClick={() => onGenerateVideo(shot.id, shot.videoPrompt)}
-                      disabled={generatingVideo}
-                      size="sm"
-                      variant="outline"
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => setStillPromptExpanded(!stillPromptExpanded)}
+                      className="mt-1.5 text-muted-foreground hover:text-foreground transition-transform"
+                      title="View/edit still prompt"
                     >
-                      Regenerate Video
-                    </Button>
-                    <select
-                      value={veoModel}
-                      onChange={(e) => onVeoModelChange(e.target.value as 'veo-2' | 'veo-3')}
-                      disabled={generatingVideo}
-                      className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-                    >
-                      <option value="veo-2">Veo 2</option>
-                      <option value="veo-3">Veo 3</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground">
-                      {generatingVideo ? "⏱️ This may take several minutes..." : "🎬 Model selection"}
-                    </p>
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-200 ${stillPromptExpanded ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div className="flex-1">
+                      <Button
+                        onClick={() => {
+                          onGenerateStill(shot.id, editedStillPrompt);
+                          setStillPromptModified(false);
+                        }}
+                        disabled={generatingImage || !baseImage}
+                        size="sm"
+                        variant={stillPromptModified ? "default" : "outline"}
+                      >
+                        {stillPromptModified ? "Generate Still" : "Regenerate Still"}
+                      </Button>
+                    </div>
                   </div>
+                  {stillPromptExpanded && (
+                    <div className="ml-6 bg-muted p-3 rounded-md relative">
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        {stillPromptEditing ? (
+                          <button
+                            onClick={() => {
+                              setStillPromptEditing(false);
+                              setStillPromptExpanded(false);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Done
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setStillPromptEditing(true)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">Still Prompt:</p>
+                      {stillPromptEditing ? (
+                        <textarea
+                          value={editedStillPrompt}
+                          onChange={(e) => {
+                            setEditedStillPrompt(e.target.value);
+                            setStillPromptModified(e.target.value !== shot.stillPrompt);
+                          }}
+                          className="w-full text-sm bg-background border border-input rounded-md p-2 min-h-[100px]"
+                        />
+                      ) : (
+                        <p className="text-sm pr-12">{editedStillPrompt}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => setVideoPromptExpanded(!videoPromptExpanded)}
+                      className="mt-1.5 text-muted-foreground hover:text-foreground transition-transform"
+                      title="View/edit video prompt"
+                    >
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-200 ${videoPromptExpanded ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div className="flex-1 flex items-center gap-3">
+                      <Button
+                        onClick={() => {
+                          onGenerateVideo(shot.id, editedVideoPrompt);
+                          setVideoPromptModified(false);
+                        }}
+                        disabled={generatingVideo}
+                        size="sm"
+                        variant={videoPromptModified ? "default" : "outline"}
+                      >
+                        {videoPromptModified ? "Generate Video" : "Regenerate Video"}
+                      </Button>
+                      <select
+                        value={veoModel}
+                        onChange={(e) => onVeoModelChange(e.target.value as 'veo-2' | 'veo-3')}
+                        disabled={generatingVideo}
+                        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="veo-2">Veo 2</option>
+                        <option value="veo-3">Veo 3</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">
+                        {generatingVideo ? "⏱️ This may take several minutes..." : "🎬 Model selection"}
+                      </p>
+                    </div>
+                  </div>
+                  {videoPromptExpanded && (
+                    <div className="ml-6 bg-muted p-3 rounded-md relative">
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        {videoPromptEditing ? (
+                          <button
+                            onClick={() => {
+                              setVideoPromptEditing(false);
+                              setVideoPromptExpanded(false);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Done
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setVideoPromptEditing(true)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">Video Prompt:</p>
+                      {videoPromptEditing ? (
+                        <textarea
+                          value={editedVideoPrompt}
+                          onChange={(e) => {
+                            setEditedVideoPrompt(e.target.value);
+                            setVideoPromptModified(e.target.value !== shot.videoPrompt);
+                          }}
+                          className="w-full text-sm bg-background border border-input rounded-md p-2 min-h-[100px]"
+                        />
+                      ) : (
+                        <p className="text-sm pr-12">{editedVideoPrompt}</p>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
