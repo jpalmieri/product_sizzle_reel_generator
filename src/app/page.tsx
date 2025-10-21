@@ -11,7 +11,7 @@ import type { StillImageResponse } from "@/types/still-image";
 import type { VideoAnalysisResponse } from "@/types/video-analysis";
 import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
-import type { MusicGenerationResponse } from "@/types/music";
+import type { MusicGenerationResponse, MusicDuckingSettings } from "@/types/music";
 import type { Timeline as TimelineType } from "@/types/timeline";
 import { TimelineV2 } from "@/components/timeline/TimelineV2";
 import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
@@ -39,6 +39,12 @@ export default function Home() {
   const [generatingNarration, setGeneratingNarration] = useState<Record<string, boolean>>({});
   const [generatedMusic, setGeneratedMusic] = useState<MusicGenerationResponse | null>(null);
   const [generatingMusic, setGeneratingMusic] = useState(false);
+  const [musicDuckingSettings, setMusicDuckingSettings] = useState<MusicDuckingSettings>({
+    enabled: true,
+    normalVolume: 0.3,
+    duckedVolume: 0.15,
+    fadeDuration: 0.2,
+  });
   const [previewTime, setPreviewTime] = useState(0);
   const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -648,6 +654,7 @@ export default function Home() {
                   generatedImages={generatedImages}
                   generatedNarration={generatedNarration}
                   generatedMusic={generatedMusic}
+                  musicDuckingSettings={musicDuckingSettings}
                   onTimeUpdate={setPreviewTime}
                   seekTime={seekTime}
                 />
@@ -691,6 +698,7 @@ export default function Home() {
                 generatingNarration={generatingNarration}
                 generatedMusic={generatedMusic}
                 generatingMusic={generatingMusic}
+                musicDuckingSettings={musicDuckingSettings}
                 videoFile={videoFile}
                 baseImage={baseImage}
                 veoModel={veoModel}
@@ -699,6 +707,7 @@ export default function Home() {
                 onExtractClip={handleExtractClip}
                 onGenerateNarration={handleGenerateNarration}
                 onGenerateMusic={handleGenerateMusic}
+                onMusicDuckingSettingsChange={setMusicDuckingSettings}
                 onVeoModelChange={setVeoModel}
               />
             </CardContent>

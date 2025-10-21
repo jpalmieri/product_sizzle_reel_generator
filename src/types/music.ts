@@ -18,3 +18,13 @@ export interface MusicGenerationResponse {
   processingTimeMs: number;
   timestamp: string;
 }
+
+/**
+ * Audio ducking configuration for background music
+ */
+export interface MusicDuckingSettings {
+  enabled: boolean;
+  normalVolume: number; // 0-1, volume when no narration
+  duckedVolume: number; // 0-1, volume during narration
+  fadeDuration: number; // seconds, fade in/out duration
+}

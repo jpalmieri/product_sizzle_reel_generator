@@ -4,8 +4,9 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import type { Timeline as TimelineType, VideoClip, AudioClip } from "@/types/timeline";
 import type { StoryboardShot } from "@/types/storyboard";
+import type { MusicDuckingSettings } from "@/types/music";
 import { useTimelineClips, getClipsAtTime } from "@/hooks/useTimelineClips";
-import { isVideoClip, isAudioClip } from "@/types/timeline";
+import { isVideoClip, isAudioClip, isNarrationClip } from "@/types/timeline";
 
 interface PreviewPlayerV2Props {
   timeline: TimelineType;
@@ -14,6 +15,7 @@ interface PreviewPlayerV2Props {
   generatedImages: Record<string, { imageUrl: string }>;
   generatedNarration: Record<string, { audioUrl: string }>;
   generatedMusic?: { audioUrl: string } | null;
+  musicDuckingSettings?: MusicDuckingSettings;
   onTimeUpdate?: (time: number) => void;
   seekTime?: number;
 }
@@ -25,6 +27,7 @@ export function PreviewPlayerV2({
   generatedImages,
   generatedNarration,
   generatedMusic,
+  musicDuckingSettings,
   onTimeUpdate,
   seekTime,
 }: PreviewPlayerV2Props) {
@@ -159,7 +162,7 @@ export function PreviewPlayerV2({
         musicRef.current.pause();
       }
       musicRef.current = new Audio(generatedMusic.audioUrl);
-      musicRef.current.volume = 0.3; // Lower volume for background music
+      musicRef.current.volume = musicDuckingSettings?.normalVolume ?? 0.3;
       musicRef.current.loop = false;
     }
 
@@ -169,7 +172,7 @@ export function PreviewPlayerV2({
         musicRef.current.pause();
       }
     };
-  }, [generatedMusic?.audioUrl]);
+  }, [generatedMusic?.audioUrl, musicDuckingSettings?.normalVolume]);
 
   // Sync music playback to timeline
   useEffect(() => {
@@ -193,6 +196,45 @@ export function PreviewPlayerV2({
       music.pause();
     }
   }, [currentTime, isPlaying, totalDuration, SEEK_THRESHOLD_SECONDS]);
+
+  // Audio ducking: smoothly adjust music volume based on narration
+  useEffect(() => {
+    if (!musicRef.current || !musicDuckingSettings?.enabled) {
+      return;
+    }
+
+    const music = musicRef.current;
+    const narrationClips = audioClips.filter(isNarrationClip);
+
+    // Find if there's active or upcoming narration
+    const LOOKAHEAD = 0.2; // Look ahead 0.2s to start ducking early
+    const activeNarration = narrationClips.find(clip =>
+      currentTime >= (clip.startTime - LOOKAHEAD) &&
+      currentTime < clip.startTime + clip.duration
+    );
+
+    const targetVolume = activeNarration
+      ? musicDuckingSettings.duckedVolume
+      : musicDuckingSettings.normalVolume;
+
+    // Smooth volume transition
+    const currentVolume = music.volume;
+    const volumeDiff = targetVolume - currentVolume;
+
+    if (Math.abs(volumeDiff) > 0.01) {
+      // Calculate step size based on fade duration
+      // We want to complete the fade in fadeDuration seconds
+      const fadeStepSize = volumeDiff / (musicDuckingSettings.fadeDuration * 60); // Assumes 60fps
+      const newVolume = currentVolume + fadeStepSize;
+
+      // Clamp to target to avoid overshooting
+      if (volumeDiff > 0) {
+        music.volume = Math.min(newVolume, targetVolume);
+      } else {
+        music.volume = Math.max(newVolume, targetVolume);
+      }
+    }
+  }, [currentTime, audioClips, musicDuckingSettings]);
 
   // Handle seeking
   useEffect(() => {

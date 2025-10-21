@@ -3,14 +3,18 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { MusicGenerationResponse } from "@/types/music";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import type { MusicGenerationResponse, MusicDuckingSettings } from "@/types/music";
 
 interface MusicEditorProps {
   musicPrompt: string;
   generatedMusic: MusicGenerationResponse | null;
   generatingMusic: boolean;
   requestedDurationMs: number;
+  duckingSettings: MusicDuckingSettings;
   onGenerateMusic: (prompt: string, durationMs: number) => void;
+  onDuckingSettingsChange: (settings: MusicDuckingSettings) => void;
 }
 
 export function MusicEditor({
@@ -18,7 +22,9 @@ export function MusicEditor({
   generatedMusic,
   generatingMusic,
   requestedDurationMs,
+  duckingSettings,
   onGenerateMusic,
+  onDuckingSettingsChange,
 }: MusicEditorProps) {
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [promptEditing, setPromptEditing] = useState(false);
@@ -146,6 +152,93 @@ export function MusicEditor({
             Generated in {(generatedMusic.processingTimeMs / 1000).toFixed(1)}s
             {generatedMusic.actualDurationSeconds && ` • Duration: ${generatedMusic.actualDurationSeconds.toFixed(1)}s`}
           </p>
+        </div>
+      )}
+
+      {/* Audio Ducking Settings */}
+      {generatedMusic && (
+        <div className="space-y-3 border-t pt-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <label className="text-sm font-medium">Audio Ducking</label>
+              <p className="text-xs text-muted-foreground">
+                Lower music volume during narration
+              </p>
+            </div>
+            <Switch
+              checked={duckingSettings.enabled}
+              onCheckedChange={(enabled) =>
+                onDuckingSettingsChange({ ...duckingSettings, enabled })
+              }
+            />
+          </div>
+
+          {duckingSettings.enabled && (
+            <div className="space-y-4 pl-4 border-l-2 border-muted">
+              {/* Normal Volume */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-muted-foreground">
+                    Normal Volume
+                  </label>
+                  <span className="text-sm font-mono">
+                    {Math.round(duckingSettings.normalVolume * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  value={[duckingSettings.normalVolume]}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onValueChange={([normalVolume]) =>
+                    onDuckingSettingsChange({ ...duckingSettings, normalVolume })
+                  }
+                />
+              </div>
+
+              {/* Ducked Volume */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-muted-foreground">
+                    Ducked Volume
+                  </label>
+                  <span className="text-sm font-mono">
+                    {Math.round(duckingSettings.duckedVolume * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  value={[duckingSettings.duckedVolume]}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onValueChange={([duckedVolume]) =>
+                    onDuckingSettingsChange({ ...duckingSettings, duckedVolume })
+                  }
+                />
+              </div>
+
+              {/* Fade Duration */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-muted-foreground">
+                    Fade Duration
+                  </label>
+                  <span className="text-sm font-mono">
+                    {duckingSettings.fadeDuration.toFixed(1)}s
+                  </span>
+                </div>
+                <Slider
+                  value={[duckingSettings.fadeDuration]}
+                  min={0.1}
+                  max={1.0}
+                  step={0.05}
+                  onValueChange={([fadeDuration]) =>
+                    onDuckingSettingsChange({ ...duckingSettings, fadeDuration })
+                  }
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

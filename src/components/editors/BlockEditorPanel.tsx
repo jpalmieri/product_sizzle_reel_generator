@@ -7,7 +7,7 @@ import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
 import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
-import type { MusicGenerationResponse } from "@/types/music";
+import type { MusicGenerationResponse, MusicDuckingSettings } from "@/types/music";
 
 interface BlockEditorPanelProps {
   selectedBlockId: string | null;
@@ -21,6 +21,7 @@ interface BlockEditorPanelProps {
   generatingNarration: Record<string, boolean>;
   generatedMusic: MusicGenerationResponse | null;
   generatingMusic: boolean;
+  musicDuckingSettings: MusicDuckingSettings;
   videoFile: string | null;
   baseImage: string | null;
   veoModel: 'veo-2' | 'veo-3';
@@ -29,6 +30,7 @@ interface BlockEditorPanelProps {
   onExtractClip: (shotId: string, startTime: number, endTime: number) => void;
   onGenerateNarration: (narrationId: string, text: string) => void;
   onGenerateMusic: (prompt: string) => void;
+  onMusicDuckingSettingsChange: (settings: MusicDuckingSettings) => void;
   onVeoModelChange: (model: 'veo-2' | 'veo-3') => void;
 }
 
@@ -44,6 +46,7 @@ export function BlockEditorPanel({
   generatingNarration,
   generatedMusic,
   generatingMusic,
+  musicDuckingSettings,
   videoFile,
   baseImage,
   veoModel,
@@ -52,6 +55,7 @@ export function BlockEditorPanel({
   onExtractClip,
   onGenerateNarration,
   onGenerateMusic,
+  onMusicDuckingSettingsChange,
   onVeoModelChange,
 }: BlockEditorPanelProps) {
   if (!selectedBlockId) {
@@ -106,7 +110,9 @@ export function BlockEditorPanel({
           generatedMusic={generatedMusic}
           generatingMusic={generatingMusic}
           requestedDurationMs={generatedMusic?.requestedDurationMs || 0}
+          duckingSettings={musicDuckingSettings}
           onGenerateMusic={onGenerateMusic}
+          onDuckingSettingsChange={onMusicDuckingSettingsChange}
         />
       </div>
     );
