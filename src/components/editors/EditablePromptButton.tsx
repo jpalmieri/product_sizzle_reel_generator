@@ -7,10 +7,12 @@ interface EditablePromptButtonProps {
   initialPrompt: string;
   promptLabel: string;
   buttonContent: ReactNode;
-  onGenerate: (prompt: string) => void;
+  onGenerate: (prompt: string, duration?: number) => void;
   disabled?: boolean;
   variant: "default" | "outline";
   rightContent?: ReactNode;
+  showDuration?: boolean;
+  initialDuration?: number;
 }
 
 export function EditablePromptButton({

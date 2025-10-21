@@ -2,10 +2,12 @@
 
 import { ShotEditor } from "./ShotEditor";
 import { NarrationEditor } from "./NarrationEditor";
+import { MusicEditor } from "./MusicEditor";
 import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
 import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
+import type { MusicGenerationResponse } from "@/types/music";
 
 interface BlockEditorPanelProps {
   selectedBlockId: string | null;
@@ -17,6 +19,8 @@ interface BlockEditorPanelProps {
   extractingClips: Record<string, boolean>;
   generatedNarration: Record<string, NarrationGenerationResponse>;
   generatingNarration: Record<string, boolean>;
+  generatedMusic: MusicGenerationResponse | null;
+  generatingMusic: boolean;
   videoFile: string | null;
   baseImage: string | null;
   veoModel: 'veo-2' | 'veo-3';
@@ -24,6 +28,7 @@ interface BlockEditorPanelProps {
   onGenerateVideo: (shotId: string, prompt: string) => void;
   onExtractClip: (shotId: string, startTime: number, endTime: number) => void;
   onGenerateNarration: (narrationId: string, text: string) => void;
+  onGenerateMusic: (prompt: string) => void;
   onVeoModelChange: (model: 'veo-2' | 'veo-3') => void;
 }
 
@@ -37,6 +42,8 @@ export function BlockEditorPanel({
   extractingClips,
   generatedNarration,
   generatingNarration,
+  generatedMusic,
+  generatingMusic,
   videoFile,
   baseImage,
   veoModel,
@@ -44,6 +51,7 @@ export function BlockEditorPanel({
   onGenerateVideo,
   onExtractClip,
   onGenerateNarration,
+  onGenerateMusic,
   onVeoModelChange,
 }: BlockEditorPanelProps) {
   if (!selectedBlockId) {
@@ -84,6 +92,21 @@ export function BlockEditorPanel({
           generatedNarration={generatedNarration[selectedNarration.id]}
           generatingNarration={generatingNarration[selectedNarration.id]}
           onGenerateNarration={onGenerateNarration}
+        />
+      </div>
+    );
+  }
+
+  // Check if it's the background music
+  if (selectedBlockId === 'background-music' && storyboard.musicPrompt) {
+    return (
+      <div className="mt-6">
+        <MusicEditor
+          musicPrompt={storyboard.musicPrompt}
+          generatedMusic={generatedMusic}
+          generatingMusic={generatingMusic}
+          requestedDurationMs={generatedMusic?.requestedDurationMs || 0}
+          onGenerateMusic={onGenerateMusic}
         />
       </div>
     );

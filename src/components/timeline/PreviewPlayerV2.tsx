@@ -13,6 +13,7 @@ interface PreviewPlayerV2Props {
   generatedVideos: Record<string, { videoUrl: string }>;
   generatedImages: Record<string, { imageUrl: string }>;
   generatedNarration: Record<string, { audioUrl: string }>;
+  generatedMusic?: { audioUrl: string } | null;
   onTimeUpdate?: (time: number) => void;
   seekTime?: number;
 }
@@ -23,11 +24,13 @@ export function PreviewPlayerV2({
   generatedVideos,
   generatedImages,
   generatedNarration,
+  generatedMusic,
   onTimeUpdate,
   seekTime,
 }: PreviewPlayerV2Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const musicRef = useRef<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const animationFrameRef = useRef<number>();
@@ -132,8 +135,64 @@ export function PreviewPlayerV2({
       audioRefs.current.forEach((audio) => {
         audio.pause();
       });
+      if (musicRef.current) {
+        musicRef.current.pause();
+      }
     }
   }, [isPlaying]);
+
+  // Create music audio element when music is available
+  useEffect(() => {
+    if (!generatedMusic?.audioUrl) {
+      // Clean up if music is removed
+      if (musicRef.current) {
+        musicRef.current.pause();
+        musicRef.current.src = '';
+        musicRef.current = null;
+      }
+      return;
+    }
+
+    // Create music audio element
+    if (!musicRef.current || musicRef.current.src !== generatedMusic.audioUrl) {
+      if (musicRef.current) {
+        musicRef.current.pause();
+      }
+      musicRef.current = new Audio(generatedMusic.audioUrl);
+      musicRef.current.volume = 0.3; // Lower volume for background music
+      musicRef.current.loop = false;
+    }
+
+    // Cleanup only when music changes or component unmounts
+    return () => {
+      if (musicRef.current) {
+        musicRef.current.pause();
+      }
+    };
+  }, [generatedMusic?.audioUrl]);
+
+  // Sync music playback to timeline
+  useEffect(() => {
+    if (!musicRef.current) return;
+
+    const music = musicRef.current;
+
+    if (isPlaying) {
+      const drift = Math.abs(music.currentTime - currentTime);
+
+      if (drift > SEEK_THRESHOLD_SECONDS) {
+        music.currentTime = Math.max(0, Math.min(currentTime, music.duration || totalDuration));
+      }
+
+      if (music.paused) {
+        music.play().catch(() => {
+          // Ignore auto-play errors
+        });
+      }
+    } else {
+      music.pause();
+    }
+  }, [currentTime, isPlaying, totalDuration, SEEK_THRESHOLD_SECONDS]);
 
   // Handle seeking
   useEffect(() => {

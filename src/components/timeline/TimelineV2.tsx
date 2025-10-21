@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import type { Timeline as TimelineType, VideoClip, AudioClip } from "@/types/timeline";
 import type { StoryboardShot } from "@/types/storyboard";
 import { useTimelineClips } from "@/hooks/useTimelineClips";
-import { isVideoClip, isAudioClip, isNarrationClip } from "@/types/timeline";
+import { isVideoClip, isAudioClip, isNarrationClip, isMusicClip } from "@/types/timeline";
 
 interface TimelineV2Props {
   timeline: TimelineType;
@@ -14,6 +14,7 @@ interface TimelineV2Props {
   generatedVideos?: Record<string, any>;
   generatedImages?: Record<string, any>;
   generatedNarration?: Record<string, any>;
+  generatedMusic?: any; // MusicGenerationResponse
   selectedClipId?: string | null;
   onSelectClip?: (clipId: string) => void;
   onClipPositionChange?: (clipId: string, newStartTime: number) => void;
@@ -32,6 +33,10 @@ export function TimelineV2({
   onClipPositionChange,
 }: TimelineV2Props) {
   const { videoClips, audioClips, totalDuration } = useTimelineClips(timeline);
+
+  // Separate narration and music clips
+  const narrationClips = audioClips.filter(isNarrationClip);
+  const musicClips = audioClips.filter(isMusicClip);
   const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartTime, setDragStartTime] = useState(0);
@@ -168,8 +173,8 @@ export function TimelineV2({
         </div>
       </div>
 
-      {/* Audio track */}
-      {audioClips.length > 0 && (
+      {/* Narration track */}
+      {narrationClips.length > 0 && (
         <div
           ref={timelineRef}
           className="relative bg-muted/50 rounded w-full h-[40px]"
@@ -178,48 +183,76 @@ export function TimelineV2({
           onMouseLeave={handleClipDragEnd}
         >
           <div className="absolute inset-0 flex items-center px-2">
-            <span className="text-xs text-muted-foreground font-medium">Audio</span>
+            <span className="text-xs text-muted-foreground font-medium">Narration</span>
           </div>
-          {audioClips.map((clip) => {
-            if (!isAudioClip(clip)) return null;
-
+          {narrationClips.map((clip) => {
             const leftPercent = (clip.startTime / totalDuration) * 100;
             const widthPercent = (clip.duration / totalDuration) * 100;
             const isSelected = selectedClipId === clip.sourceId;
-
-            // Color based on audio type
-            const bgColor = clip.audioType === 'narration'
-              ? 'bg-purple-500/70 border-purple-600'
-              : clip.audioType === 'music'
-              ? 'bg-blue-500/70 border-blue-600'
-              : 'bg-green-500/70 border-green-600';
-
-            const displayText = isNarrationClip(clip)
-              ? clip.text
-              : `${clip.audioType}`;
-
             const isDragging = draggingClipId === clip.id;
 
             return (
               <div
                 key={clip.id}
-                className={`absolute top-1 bottom-1 ${bgColor} rounded border ${isDragging ? 'cursor-grabbing opacity-80' : 'cursor-grab'} ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
+                className={`absolute top-1 bottom-1 bg-purple-500/70 border-purple-600 rounded border ${isDragging ? 'cursor-grabbing opacity-80' : 'cursor-grab'} ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
                 style={{
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`,
                 }}
-                title={displayText}
+                title={clip.text}
                 onMouseDown={(e) => handleClipDragStart(e, clip)}
                 onClick={(e) => {
                   if (!isDragging) {
                     e.stopPropagation();
-                    // Pass the source ID (narration ID) for editor compatibility
                     onSelectClip?.(clip.sourceId);
                   }
                 }}
               >
                 <div className="px-1 text-xs text-white/90 truncate pointer-events-none">
-                  {displayText}
+                  {clip.text}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Music track */}
+      {musicClips.length > 0 && (
+        <div
+          className="relative bg-muted/50 rounded w-full h-[40px]"
+          onMouseMove={handleClipDrag}
+          onMouseUp={handleClipDragEnd}
+          onMouseLeave={handleClipDragEnd}
+        >
+          <div className="absolute inset-0 flex items-center px-2">
+            <span className="text-xs text-muted-foreground font-medium">Music</span>
+          </div>
+          {musicClips.map((clip) => {
+            const leftPercent = (clip.startTime / totalDuration) * 100;
+            const widthPercent = (clip.duration / totalDuration) * 100;
+            const isSelected = selectedClipId === clip.sourceId;
+            const isDragging = draggingClipId === clip.id;
+
+            return (
+              <div
+                key={clip.id}
+                className={`absolute top-1 bottom-1 bg-blue-500/70 border-blue-600 rounded border ${isDragging ? 'cursor-grabbing opacity-80' : 'cursor-grab'} ${isSelected ? 'ring-2 ring-green-500 z-20' : 'z-10'}`}
+                style={{
+                  left: `${leftPercent}%`,
+                  width: `${widthPercent}%`,
+                }}
+                title="Background Music"
+                onMouseDown={(e) => handleClipDragStart(e, clip)}
+                onClick={(e) => {
+                  if (!isDragging) {
+                    e.stopPropagation();
+                    onSelectClip?.(clip.sourceId);
+                  }
+                }}
+              >
+                <div className="px-1 text-xs text-white/90 truncate pointer-events-none">
+                  Background Music
                 </div>
               </div>
             );

@@ -32,6 +32,7 @@ export interface StoryboardResponse {
   description: string;
   shots: StoryboardShot[];
   narration?: NarrationSegment[]; // independent narration timeline
+  musicPrompt?: string; // prompt for AI music generation
 }
 
 export interface StoryboardGenerationRequest {

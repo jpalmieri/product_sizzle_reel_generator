@@ -104,7 +104,8 @@ Return your response as a JSON object with this exact structure:
       "startTime": 5,
       "endTime": 10
     }
-  ]
+  ],
+  "musicPrompt": "Detailed ElevenLabs music generation prompt following the format and requirements above"
 }
 
 For CINEMATIC shots, make the still and video prompts extremely detailed and cinematic, focusing on:
@@ -172,7 +173,49 @@ Create professional voiceover narration segments that flow naturally across the 
 - Conversational tone: like a professional explainer video, not a hard sell
 - Narration should complement visuals, not repeat them
 - Example timing: A sentence might start at 2s (during shot 1) and end at 7s (during shot 2)
-- Total narration should cover key moments but allow breathing room with music-only sections`;
+- Total narration should cover key moments but allow breathing room with music-only sections
+
+BACKGROUND MUSIC PROMPT (for ElevenLabs Music Generation):
+Create a detailed prompt for AI music generation that matches the emotional arc and pacing of this sizzle reel. Follow ElevenLabs prompt best practices:
+
+REQUIRED ELEMENTS:
+- MUST include "instrumental only" since no vocals are wanted
+- MUST include "begins immediately at 0s with no leading silence or fade-in delay"
+- MUST calculate total duration by summing all shot durations (UI shots: endTime - startTime, cinematic shots: 8 seconds)
+- MUST include the exact duration in the prompt (e.g., "32 seconds" or "45.5 seconds")
+- MUST include temporal structure with specific timestamps showing when instrumentation/dynamics change
+- Be descriptive and detailed - more information = better results
+- Include mood descriptors that match the emotional journey of the shots (uplifting, hopeful, contemplative, confident, warm, etc.)
+- Include musical style/genre (Indie, acoustic, ambient, cinematic, etc.)
+- Include instrumentation details (acoustic guitar, piano, strings, subtle synth, etc.)
+- Optionally include tempo (e.g., "110 BPM") and key signature (e.g., "in C major")
+- Include production details (reverb, dynamics, build/crescendo, etc.)
+- Allow space for voiceover (not too dense or busy)
+- NO copyrighted references (no band names, artist names, or song titles)
+
+TEMPORAL STRUCTURE:
+You MUST divide the music into sections based on the narrative arc of the shots and include specific timestamps:
+- Analyze the emotional progression across all shots (setup → feature in action → benefit)
+- Create 2-4 musical sections that align with major story beats
+- Specify exact timestamps for when instrumentation, dynamics, or mood shifts occur
+- Example timing structure for a 32-second track: "sparse piano opening (0-10s), acoustic guitar enters building momentum (10-22s), subtle strings join for confident resolution (22-32s)"
+
+CONTEXT-DRIVEN MUSIC:
+- Use the emotional arc of the shots you've created to inform the music
+- If shots show struggle/uncertainty early → start sparse/contemplative
+- If shots show feature use → build momentum and confidence
+- If shots show positive outcome → resolve with warmth and hope
+- Tie instrumentation changes to narrative beats, not arbitrary timestamps
+- DO NOT mention the product, feature, Free World, or narrative context in the music prompt
+- ONLY describe musical characteristics: mood, instrumentation, tempo, key, dynamics, timing
+
+Example format: "Contemplative acoustic indie instrumental only, 32 seconds, begins immediately at 0s with no leading silence or fade-in delay. Opens with sparse solo piano (0-10s), acoustic guitar enters at 10s building gentle momentum (10-22s), subtle strings join at 22s for warm confident resolution (22-32s), 100 BPM, in G major, natural reverb, gentle dynamics to allow space for voiceover, authentic and human-centered feel."
+
+Write a single detailed prompt (3-5 sentences) for the background music that:
+1. States the exact total duration (sum of all shot durations)
+2. Includes specific temporal structure with timestamps aligned to the narrative arc
+3. Describes ONLY musical elements (NO product/feature/context references)
+4. Follows all ElevenLabs formatting requirements above`;
 };
 
 export async function POST(request: NextRequest) {
