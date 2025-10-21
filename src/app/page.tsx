@@ -247,7 +247,8 @@ export default function Home() {
       if (result.musicPrompt) {
         // Delay music generation to ensure timeline is set up first
         setTimeout(() => {
-          handleGenerateMusic(result.musicPrompt, result);
+          const customDurationMs = null; // Will auto-calculate from storyboard
+          handleGenerateMusic(result.musicPrompt, customDurationMs, result);
         }, 1000);
       }
     } catch (err) {
@@ -431,7 +432,7 @@ export default function Home() {
     }
   };
 
-  const handleGenerateMusic = async (customPrompt?: string, customDurationMs?: number, storyboardData?: StoryboardResponse) => {
+  const handleGenerateMusic = async (customPrompt?: string, customDurationMs?: number | null, storyboardData?: StoryboardResponse) => {
     // Use provided values or fall back to state
     const prompt = customPrompt || storyboard?.musicPrompt;
     const sb = storyboardData || storyboard;
@@ -443,7 +444,7 @@ export default function Home() {
 
     try {
       // Use custom duration if provided, otherwise calculate from storyboard
-      const durationMs = customDurationMs !== undefined
+      const durationMs = customDurationMs !== undefined && customDurationMs !== null
         ? customDurationMs
         : Math.round(calculateStoryboardDuration(sb) * 1000);
 

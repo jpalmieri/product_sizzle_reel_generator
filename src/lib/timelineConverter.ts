@@ -32,7 +32,8 @@ export function calculateStoryboardDuration(storyboard: StoryboardResponse): num
  */
 export function storyboardToTimeline(storyboard: StoryboardResponse): Timeline {
   const videoTrack = createVideoTrack(storyboard.shots);
-  const audioTrack = createAudioTrack(storyboard.narration || []);
+  const storyboardDuration = calculateStoryboardDuration(storyboard);
+  const audioTrack = createAudioTrack(storyboard.narration || [], storyboard.musicPrompt, storyboardDuration);
 
   const tracks: TimelineTrack[] = [
     videoTrack,
@@ -84,10 +85,11 @@ function createVideoTrack(shots: StoryboardShot[]): TimelineTrack {
 }
 
 /**
- * Create audio track from narration segments
+ * Create audio track from narration segments and optional music
  * Narration uses absolute positioning from storyboard
+ * Music placeholder uses storyboard duration (updated with actual after generation)
  */
-function createAudioTrack(narration: NarrationSegment[]): TimelineTrack {
+function createAudioTrack(narration: NarrationSegment[], musicPrompt?: string, storyboardDuration?: number): TimelineTrack {
   const audioClips: AudioClip[] = narration.map(segment => ({
     id: `audio-${segment.id}`,
     type: 'audio' as const,
@@ -97,6 +99,21 @@ function createAudioTrack(narration: NarrationSegment[]): TimelineTrack {
     startTime: segment.startTime,
     duration: segment.endTime - segment.startTime,
   }));
+
+  // Add placeholder music clip if music prompt exists
+  // Uses storyboard duration as initial size, allows clicking before generation
+  if (musicPrompt && storyboardDuration) {
+    const musicClip: AudioClip = {
+      id: 'music-background',
+      type: 'audio' as const,
+      audioType: 'music' as const,
+      sourceId: 'background-music',
+      startTime: 0,
+      duration: storyboardDuration, // Use requested duration, will update with actual
+      volume: 0.3,
+    };
+    audioClips.push(musicClip);
+  }
 
   return {
     id: 'track-audio',
@@ -207,7 +224,7 @@ export function updateClipDuration(
 
 /**
  * Add or update music clip in timeline
- * Music starts at 0 and spans the entire video duration
+ * Updates duration of existing placeholder or creates new clip
  */
 export function addMusicToTimeline(
   timeline: Timeline,
@@ -217,26 +234,40 @@ export function addMusicToTimeline(
   const updatedTracks = timeline.tracks.map(track => {
     if (track.type !== 'audio') return track;
 
-    // Remove existing music clip if any
-    const clipsWithoutMusic = track.clips.filter(
-      clip => !(clip.type === 'audio' && clip.audioType === 'music')
+    // Check if music clip already exists (placeholder from storyboard)
+    const existingMusicClip = track.clips.find(
+      clip => clip.type === 'audio' && clip.audioType === 'music'
     );
 
-    // Add new music clip
-    const musicClip: AudioClip = {
-      id: 'music-background',
-      type: 'audio' as const,
-      audioType: 'music' as const,
-      sourceId: 'background-music',
-      startTime,
-      duration: musicDuration,
-      volume: 0.3, // Lower volume to allow voiceover to be heard
-    };
+    if (existingMusicClip) {
+      // Update existing placeholder with actual duration
+      const updatedClips = track.clips.map(clip =>
+        clip.type === 'audio' && clip.audioType === 'music'
+          ? { ...clip, duration: musicDuration, startTime }
+          : clip
+      );
 
-    return {
-      ...track,
-      clips: [...clipsWithoutMusic, musicClip],
-    };
+      return {
+        ...track,
+        clips: updatedClips,
+      };
+    } else {
+      // No placeholder exists, add new music clip
+      const musicClip: AudioClip = {
+        id: 'music-background',
+        type: 'audio' as const,
+        audioType: 'music' as const,
+        sourceId: 'background-music',
+        startTime,
+        duration: musicDuration,
+        volume: 0.3,
+      };
+
+      return {
+        ...track,
+        clips: [...track.clips, musicClip],
+      };
+    }
   });
 
   return {
