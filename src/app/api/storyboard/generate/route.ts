@@ -142,11 +142,20 @@ VIDEO STORYTELLING:
 - How the shot advances the demonstration of this specific feature's value
 
 IMPORTANT GUIDELINES FOR CINEMATIC SHOTS:
-- Do NOT include descriptions of character appearance (hair color, clothing, facial features, etc.) - the visual appearance will be provided via reference image
+- Do NOT include ANY demographic or physical descriptors in stillPrompt and videoPrompt fields:
+  * NO gender descriptors (man, woman, male, female, boy, girl, etc.)
+  * NO age descriptors (young, old, elderly, teen, middle-aged, etc.)
+  * NO race/ethnicity descriptors (Black, White, Asian, Hispanic, Latino, etc.)
+  * NO physical appearance (tall, short, muscular, slim, hair color, skin tone, facial features, etc.)
+  * The character's complete appearance is defined by the uploaded base image
+- Use neutral terms like "person", "individual", or "character" when referring to the subject
+- DO include clothing/attire when it provides meaningful context (e.g., "wearing work uniform", "in casual clothes")
 - Do NOT show device screens, UI elements, or app interfaces in cinematic shots
 - DO focus on human-device interaction: typing, tapping, holding, gesturing, scrolling
 - DO emphasize character emotions and reactions that demonstrate this feature's impact and value
 - DO include authentic environmental context that supports demonstrating this specific feature
+- Example GOOD prompt: "Person sitting at kitchen table, looking at phone with hopeful expression, morning light streaming through window"
+- Example BAD prompt: "Young Black woman sitting at kitchen table..." (includes demographics)
 
 STYLE GUARDRAILS (CRITICAL):
 - Photorealistic only - no stylized, artistic, or abstract interpretations
