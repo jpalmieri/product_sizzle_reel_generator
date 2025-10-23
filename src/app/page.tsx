@@ -49,6 +49,8 @@ export default function Home() {
   const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false);
+  const [exportingVideo, setExportingVideo] = useState(false);
+  const [exportedVideoUrl, setExportedVideoUrl] = useState<string | null>(null);
 
   // Create shots lookup for timeline components
   const shotsLookup = storyboard?.shots.reduce((acc, shot) => {
@@ -498,6 +500,56 @@ export default function Home() {
     }
   };
 
+  const handleExportSizzleReel = async () => {
+    if (!timeline || !storyboard) {
+      setError("Timeline and storyboard are required for export");
+      return;
+    }
+
+    setExportingVideo(true);
+    setError(null);
+    setExportedVideoUrl(null);
+
+    try {
+      const response = await fetch("/api/video/stitch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          timeline,
+          shots: shotsLookup,
+          generatedVideos,
+          generatedImages,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to export video");
+      }
+
+      const result = await response.json();
+      setExportedVideoUrl(result.videoUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to export sizzle reel");
+    } finally {
+      setExportingVideo(false);
+    }
+  };
+
+  const handleDownloadVideo = () => {
+    if (!exportedVideoUrl) return;
+
+    // Create download link
+    const link = document.createElement('a');
+    link.href = exportedVideoUrl;
+    link.download = `sizzle-reel-${Date.now()}.mp4`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto space-y-8">
@@ -683,6 +735,40 @@ export default function Home() {
                       });
                     }}
                   />
+                </div>
+              )}
+
+              {/* Export Section */}
+              {timeline && Object.keys(generatedVideos).length > 0 && (
+                <div className="flex flex-col items-center gap-4 pt-6 border-t">
+                  <Button
+                    onClick={handleExportSizzleReel}
+                    disabled={exportingVideo}
+                    size="lg"
+                    className="min-w-[200px]"
+                  >
+                    {exportingVideo ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Exporting...
+                      </>
+                    ) : (
+                      "Export Sizzle Reel"
+                    )}
+                  </Button>
+
+                  {exportedVideoUrl && (
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-sm text-green-600 font-medium">Export complete!</p>
+                      <Button
+                        onClick={handleDownloadVideo}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Download Video
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
