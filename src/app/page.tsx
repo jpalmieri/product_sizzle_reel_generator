@@ -511,28 +511,27 @@ export default function Home() {
     setExportedVideoUrl(null);
 
     try {
-      const response = await fetch("/api/video/stitch", {
+      const response = await fetch("/api/audio/narration/assemble", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           timeline,
-          shots: shotsLookup,
-          generatedVideos,
-          generatedImages,
+          generatedNarration,
+          totalDuration: timeline.totalDuration,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to export video");
+        throw new Error(errorData.error || "Failed to export narration");
       }
 
       const result = await response.json();
-      setExportedVideoUrl(result.videoUrl);
+      setExportedVideoUrl(result.audioUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to export sizzle reel");
+      setError(err instanceof Error ? err.message : "Failed to export narration track");
     } finally {
       setExportingVideo(false);
     }
@@ -544,7 +543,7 @@ export default function Home() {
     // Create download link
     const link = document.createElement('a');
     link.href = exportedVideoUrl;
-    link.download = `sizzle-reel-${Date.now()}.mp4`;
+    link.download = `narration-track-${Date.now()}.mp3`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -753,19 +752,19 @@ export default function Home() {
                         Exporting...
                       </>
                     ) : (
-                      "Export Sizzle Reel"
+                      "Export Narration Track"
                     )}
                   </Button>
 
                   {exportedVideoUrl && (
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-sm text-green-600 font-medium">Export complete!</p>
+                      <p className="text-sm text-green-600 font-medium">Narration track assembled!</p>
                       <Button
                         onClick={handleDownloadVideo}
                         variant="outline"
                         size="sm"
                       >
-                        Download Video
+                        Download Narration Audio
                       </Button>
                     </div>
                   )}
