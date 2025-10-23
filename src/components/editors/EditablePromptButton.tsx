@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 interface EditablePromptButtonProps {
@@ -28,6 +28,14 @@ export function EditablePromptButton({
   const [promptEditing, setPromptEditing] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState(initialPrompt);
   const [promptModified, setPromptModified] = useState(false);
+
+  // Sync local state when initialPrompt changes (e.g., switching shots)
+  useEffect(() => {
+    setEditedPrompt(initialPrompt);
+    setPromptModified(false);
+    setPromptExpanded(false);
+    setPromptEditing(false);
+  }, [initialPrompt]);
 
   return (
     <>

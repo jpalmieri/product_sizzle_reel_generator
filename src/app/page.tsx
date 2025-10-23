@@ -273,6 +273,16 @@ export default function Home() {
       return;
     }
 
+    // Update storyboard with edited prompt to persist it
+    if (storyboard) {
+      setStoryboard({
+        ...storyboard,
+        shots: storyboard.shots.map(shot =>
+          shot.id === shotId ? { ...shot, stillPrompt: prompt } : shot
+        ),
+      });
+    }
+
     setGeneratingImages(prev => ({ ...prev, [shotId]: true }));
 
     const previousShots: string[] = [];
@@ -317,6 +327,16 @@ export default function Home() {
     if (!imageData?.imageUrl) {
       setError("Please generate a still image first before creating a video");
       return;
+    }
+
+    // Update storyboard with edited prompt to persist it
+    if (storyboard) {
+      setStoryboard({
+        ...storyboard,
+        shots: storyboard.shots.map(shot =>
+          shot.id === shotId ? { ...shot, videoPrompt: prompt } : shot
+        ),
+      });
     }
 
     setGeneratingVideos(prev => ({ ...prev, [shotId]: true }));
