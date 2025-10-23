@@ -50,6 +50,7 @@ export default function Home() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false);
   const [exportingVideo, setExportingVideo] = useState(false);
+  const [exportProgress, setExportProgress] = useState<string>("");
   const [exportedVideoUrl, setExportedVideoUrl] = useState<string | null>(null);
 
   // Create shots lookup for timeline components
@@ -509,13 +510,53 @@ export default function Home() {
     setExportingVideo(true);
     setError(null);
     setExportedVideoUrl(null);
+    setExportProgress("");
 
     try {
-      const response = await fetch("/api/audio/music/duck", {
+      // Step 1: Stitch video clips
+      setExportProgress("Stitching video clips...");
+      const videoResponse = await fetch("/api/video/stitch", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timeline,
+          shots: shotsLookup,
+          generatedVideos,
+          generatedImages,
+        }),
+      });
+
+      if (!videoResponse.ok) {
+        const errorData = await videoResponse.json();
+        throw new Error(errorData.error || "Failed to stitch video");
+      }
+
+      const videoResult = await videoResponse.json();
+
+      // Step 2: Assemble narration track
+      setExportProgress("Assembling narration track...");
+      const narrationResponse = await fetch("/api/audio/narration/assemble", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timeline,
+          generatedNarration,
+          totalDuration: timeline.totalDuration,
+        }),
+      });
+
+      if (!narrationResponse.ok) {
+        const errorData = await narrationResponse.json();
+        throw new Error(errorData.error || "Failed to assemble narration");
+      }
+
+      const narrationResult = await narrationResponse.json();
+
+      // Step 3: Duck music track
+      setExportProgress("Ducking music track...");
+      const musicResponse = await fetch("/api/audio/music/duck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           musicUrl: generatedMusic.audioUrl,
           timeline,
@@ -524,15 +565,36 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to export music");
+      if (!musicResponse.ok) {
+        const errorData = await musicResponse.json();
+        throw new Error(errorData.error || "Failed to duck music");
       }
 
-      const result = await response.json();
-      setExportedVideoUrl(result.audioUrl);
+      const musicResult = await musicResponse.json();
+
+      // Step 4: Final assembly - mix audio + video
+      setExportProgress("Mixing audio and video...");
+      const assembleResponse = await fetch("/api/video/assemble", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoUrl: videoResult.videoUrl,
+          narrationAudioUrl: narrationResult.audioUrl,
+          musicAudioUrl: musicResult.audioUrl,
+        }),
+      });
+
+      if (!assembleResponse.ok) {
+        const errorData = await assembleResponse.json();
+        throw new Error(errorData.error || "Failed to assemble final video");
+      }
+
+      const finalResult = await assembleResponse.json();
+      setExportedVideoUrl(finalResult.videoUrl);
+      setExportProgress("Complete!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to export music track");
+      setError(err instanceof Error ? err.message : "Failed to export sizzle reel");
+      setExportProgress("");
     } finally {
       setExportingVideo(false);
     }
@@ -544,7 +606,7 @@ export default function Home() {
     // Create download link
     const link = document.createElement('a');
     link.href = exportedVideoUrl;
-    link.download = `music-track-${Date.now()}.mp3`;
+    link.download = `sizzle-reel-${Date.now()}.mp4`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -750,22 +812,22 @@ export default function Home() {
                     {exportingVideo ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                        Exporting...
+                        {exportProgress || "Exporting..."}
                       </>
                     ) : (
-                      "Export Ducked Music Track"
+                      "Export Sizzle Reel"
                     )}
                   </Button>
 
                   {exportedVideoUrl && (
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-sm text-green-600 font-medium">Ducked music track generated!</p>
+                      <p className="text-sm text-green-600 font-medium">Sizzle reel complete!</p>
                       <Button
                         onClick={handleDownloadVideo}
                         variant="outline"
                         size="sm"
                       >
-                        Download Music Audio
+                        Download Video
                       </Button>
                     </div>
                   )}
