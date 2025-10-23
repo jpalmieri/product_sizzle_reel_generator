@@ -501,8 +501,8 @@ export default function Home() {
   };
 
   const handleExportSizzleReel = async () => {
-    if (!timeline || !storyboard) {
-      setError("Timeline and storyboard are required for export");
+    if (!timeline || !storyboard || !generatedMusic) {
+      setError("Timeline, storyboard, and music are required for export");
       return;
     }
 
@@ -511,27 +511,28 @@ export default function Home() {
     setExportedVideoUrl(null);
 
     try {
-      const response = await fetch("/api/audio/narration/assemble", {
+      const response = await fetch("/api/audio/music/duck", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          musicUrl: generatedMusic.audioUrl,
           timeline,
-          generatedNarration,
+          duckingSettings: musicDuckingSettings,
           totalDuration: timeline.totalDuration,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to export narration");
+        throw new Error(errorData.error || "Failed to export music");
       }
 
       const result = await response.json();
       setExportedVideoUrl(result.audioUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to export narration track");
+      setError(err instanceof Error ? err.message : "Failed to export music track");
     } finally {
       setExportingVideo(false);
     }
@@ -543,7 +544,7 @@ export default function Home() {
     // Create download link
     const link = document.createElement('a');
     link.href = exportedVideoUrl;
-    link.download = `narration-track-${Date.now()}.mp3`;
+    link.download = `music-track-${Date.now()}.mp3`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -752,19 +753,19 @@ export default function Home() {
                         Exporting...
                       </>
                     ) : (
-                      "Export Narration Track"
+                      "Export Ducked Music Track"
                     )}
                   </Button>
 
                   {exportedVideoUrl && (
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-sm text-green-600 font-medium">Narration track assembled!</p>
+                      <p className="text-sm text-green-600 font-medium">Ducked music track generated!</p>
                       <Button
                         onClick={handleDownloadVideo}
                         variant="outline"
                         size="sm"
                       >
-                        Download Narration Audio
+                        Download Music Audio
                       </Button>
                     </div>
                   )}
