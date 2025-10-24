@@ -187,6 +187,11 @@ export default function Home() {
       return;
     }
 
+    if (!videoFile) {
+      setError("Please upload a UI screen recording");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -678,13 +683,18 @@ export default function Home() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Generate Storyboard</CardTitle>
-                {!isInputSectionCollapsed && (
-                  <CardDescription>
-                    Describe your product and we&apos;ll create a cinematic storyboard for your sizzle reel
-                  </CardDescription>
-                )}
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900">
+                  <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div>
+                  <CardTitle>Project Input</CardTitle>
+                  {!isInputSectionCollapsed && (
+                    <CardDescription>Upload assets and define your sizzle reel</CardDescription>
+                  )}
+                </div>
               </div>
               {storyboard && (
                 <Button
@@ -692,91 +702,180 @@ export default function Home() {
                   size="sm"
                   onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
                 >
-                  {isInputSectionCollapsed ? 'Edit Inputs' : 'Collapse'}
+                  <svg
+                    className={`h-4 w-4 transition-transform ${isInputSectionCollapsed ? '' : 'rotate-180'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </Button>
               )}
             </div>
           </CardHeader>
-          <CardContent className={`space-y-4 ${isInputSectionCollapsed ? 'hidden' : ''}`}>
+          <CardContent className={`space-y-6 ${isInputSectionCollapsed ? 'hidden' : ''}`}>
+            {/* Upload Zones Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Character Image Drop Zone */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Character Image (Required)</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={loading}
+                    className={`absolute inset-0 w-full h-full opacity-0 z-10 ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  />
+                  <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    baseImage
+                      ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950'
+                      : 'border-gray-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'
+                  }`}>
+                    {baseImage ? (
+                      <div className="space-y-2">
+                        <img
+                          src={baseImage}
+                          alt="Character reference"
+                          className="w-24 h-24 object-cover rounded-lg mx-auto"
+                        />
+                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">✓ Character uploaded</p>
+                      </div>
+                    ) : (
+                      <>
+                        <svg className="mx-auto h-12 w-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <p className="mt-2 text-sm font-medium">Drop character image here</p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Video Drop Zone */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">UI Screen Recording (Required)</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoUpload}
+                    disabled={loading}
+                    className={`absolute inset-0 w-full h-full opacity-0 z-10 ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  />
+                  <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    videoFile
+                      ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-950'
+                      : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600'
+                  }`}>
+                    {compressingVideo ? (
+                      <div className="space-y-2">
+                        <div className="animate-spin mx-auto h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full"></div>
+                        <p className="text-sm font-medium">Compressing video...</p>
+                        <p className="text-xs text-muted-foreground">Optimizing for analysis</p>
+                      </div>
+                    ) : videoFile ? (
+                      <div className="space-y-2">
+                        <svg className="mx-auto h-12 w-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        {analyzingVideo ? (
+                          <>
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="animate-spin h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full"></div>
+                              <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                                Analyzing video...
+                              </p>
+                            </div>
+                            <p className="text-xs text-purple-700 dark:text-purple-300">
+                              Identifying UI segments and actions
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                              {videoAnalysis ? '✓ Video analyzed' : 'Video uploaded'}
+                            </p>
+                            {videoAnalysis && (
+                              <p className="text-xs text-purple-700 dark:text-purple-300">
+                                {videoAnalysis.duration.toFixed(1)}s • {videoAnalysis.segments.length} segments
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <svg className="mx-auto h-12 w-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <p className="mt-2 text-sm font-medium">Drop screen recording here</p>
+                        <p className="text-xs text-muted-foreground">MP4, MOV (auto-compressed if large)</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Product Description */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Product Description</label>
+              <label className="text-sm font-medium">Product Description (Required)</label>
               <Textarea
-                placeholder="Describe your product or app feature in detail. What does it do? What makes it special? What problem does it solve?"
+                placeholder="Revolutionary NeuralChain™ platform leveraging hyperscale synergy nodes to disrupt the global productivity paradigm. Features include AI-powered thoughtstreaming, Web7 integration, quantum-entangled collaboration holograms, and blockchain-verified mindfulness metrics."
                 value={productDescription}
                 onChange={(e) => setProductDescription(e.target.value)}
-                rows={4}
+                className={`resize-none transition-all duration-300 ${
+                  loading ? 'h-10' : (storyboard && !isInputSectionCollapsed ? 'h-60' : 'h-24')
+                }`}
+                disabled={loading}
               />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Character Image (Required)</label>
-              <p className="text-xs text-muted-foreground">
-                Upload a reference image of your character - this ensures visual consistency across all generated stills
-              </p>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
-              {baseImage && (
-                <div className="border rounded-lg p-2 bg-muted">
-                  <img
-                    src={baseImage}
-                    alt="Character reference image"
-                    className="max-w-32 h-auto rounded"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Character image uploaded</p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">UI Screen Recording (Optional)</label>
-              <p className="text-xs text-muted-foreground">
-                Upload a screen recording of your app feature. The AI will analyze it and intelligently mix UI clips with cinematic shots. Large videos will be automatically compressed for analysis. Recommended under 60 seconds.
-              </p>
-              <Input
-                type="file"
-                accept="video/*"
-                onChange={handleVideoUpload}
-              />
-              {videoFile && (
-                <div className="space-y-2">
-                  {compressingVideo ? (
-                    <div className="border rounded-lg p-3 bg-blue-50 dark:bg-blue-950">
-                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Compressing video...</p>
-                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                        Large video detected - optimizing for analysis
-                      </p>
-                    </div>
-                  ) : !videoAnalysis ? (
-                    <div className="border rounded-lg p-3 bg-muted">
-                      <p className="text-sm font-medium">Video uploaded</p>
-                      <p className="text-xs text-muted-foreground">Will be analyzed when you generate storyboard</p>
-                    </div>
-                  ) : (
-                    <div className="border rounded-lg p-3 bg-green-50 dark:bg-green-950">
-                      <p className="text-sm font-medium text-green-900 dark:text-green-100">✓ Video analyzed</p>
-                      <p className="text-xs text-green-700 dark:text-green-300">
-                        Duration: {videoAnalysis.duration.toFixed(1)}s • {videoAnalysis.segments.length} segments identified
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">{videoAnalysis.overallDescription}</p>
-                    </div>
-                  )}
-                </div>
+              {loading && (
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  {analyzingVideo ? 'Analyzing video...' : 'Generating storyboard...'}
+                </p>
               )}
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm">{error}</div>
+              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3 text-sm text-red-600 dark:text-red-400">
+                {error}
+              </div>
             )}
 
+            {/* Generate Button */}
             <Button
               onClick={handleGenerateStoryboard}
-              disabled={loading || !productDescription.trim()}
+              disabled={loading || !productDescription.trim() || !baseImage || !videoFile}
+              size="lg"
+              className={`w-full text-white ${
+                loading
+                  ? 'bg-gradient-to-r from-blue-500 via-purple-600 via-blue-500 to-purple-600 bg-[length:200%_100%] animate-[gradient_2s_ease-in-out_infinite]'
+                  : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+              }`}
+              style={loading ? {
+                backgroundPosition: 'left center',
+                animation: 'gradient 2s ease-in-out infinite',
+              } : undefined}
             >
+              <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
               {loading ? "Generating..." : "Generate Storyboard"}
             </Button>
+            <style jsx>{`
+              @keyframes gradient {
+                0%, 100% {
+                  background-position: 0% 50%;
+                }
+                50% {
+                  background-position: 100% 50%;
+                }
+              }
+            `}</style>
           </CardContent>
           {isInputSectionCollapsed && storyboard && (
             <CardContent className="!block">
