@@ -8,8 +8,8 @@ interface TimelineProps {
   narration?: NarrationSegment[];
   currentTime?: number;
   onSeek?: (time: number) => void;
-  generatedVideos?: Record<string, any>;
-  generatedImages?: Record<string, any>;
+  generatedVideos?: Record<string, { videoUrl: string }>;
+  generatedImages?: Record<string, { imageUrl: string }>;
   selectedBlockId?: string | null;
   onSelectBlock?: (blockId: string) => void;
 }

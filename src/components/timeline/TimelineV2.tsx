@@ -11,10 +11,10 @@ interface TimelineV2Props {
   shots: Record<string, StoryboardShot>; // Lookup by shot ID
   currentTime?: number;
   onSeek?: (time: number) => void;
-  generatedVideos?: Record<string, any>;
-  generatedImages?: Record<string, any>;
-  generatedNarration?: Record<string, any>;
-  generatedMusic?: any; // MusicGenerationResponse
+  generatedVideos?: Record<string, { videoUrl: string }>;
+  generatedImages?: Record<string, { imageUrl: string }>;
+  generatedNarration?: Record<string, { audioUrl: string }>;
+  generatedMusic?: { audioUrl: string } | null;
   selectedClipId?: string | null;
   onSelectClip?: (clipId: string) => void;
   onClipPositionChange?: (clipId: string, newStartTime: number) => void;
