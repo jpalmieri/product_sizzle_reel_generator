@@ -17,8 +17,10 @@ import { TimelineV2 } from "@/components/timeline/TimelineV2";
 import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
 import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
 import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calculateStoryboardDuration, addMusicToTimeline } from "@/lib/timelineConverter";
+import { useErrorToast } from "@/hooks/use-error-toast";
 
 export default function Home() {
+  const { showError } = useErrorToast();
   const [productDescription, setProductDescription] = useState("");
   const [baseImage, setBaseImage] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<string | null>(null); // Original video for clip extraction
@@ -30,7 +32,6 @@ export default function Home() {
   const [storyboard, setStoryboard] = useState<StoryboardResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineType | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<Record<string, StillImageResponse>>({});
   const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
   const [generatedVideos, setGeneratedVideos] = useState<Record<string, VideoGenerationResponse>>({});
@@ -72,7 +73,7 @@ export default function Home() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file');
+      showError("Please select a valid image file");
       return;
     }
 
@@ -91,11 +92,9 @@ export default function Home() {
 
     // Validate file type
     if (!file.type.startsWith('video/')) {
-      setError('Please select a valid video file');
+      showError("Please select a valid video file");
       return;
     }
-
-    setError(null);
     setVideoAnalysis(null); // Clear previous analysis
     setCompressedVideoFile(null); // Clear previous compressed video
 
@@ -133,7 +132,7 @@ export default function Home() {
 
           console.log(`Video compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressionResult.compressedSize / 1024 / 1024).toFixed(2)}MB (${(compressionResult.compressionRatio * 100).toFixed(0)}%)`);
         } catch (err) {
-          setError(`Failed to compress video: ${err instanceof Error ? err.message : String(err)}`);
+          showError(`Failed to compress video: ${err instanceof Error ? err.message : String(err)}`);
           setVideoFile(null); // Clear video if compression fails
         } finally {
           setCompressingVideo(false);
@@ -148,12 +147,11 @@ export default function Home() {
 
   const handleAnalyzeVideo = async () => {
     if (!compressedVideoFile || !videoMimeType) {
-      setError("Please upload a video first");
+      showError("Please upload a video first");
       return;
     }
 
     setAnalyzingVideo(true);
-    setError(null);
 
     try {
       const response = await fetch("/api/video/analyze", {
@@ -175,7 +173,7 @@ export default function Home() {
       const result: VideoAnalysisResponse = await response.json();
       setVideoAnalysis(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to analyze video");
+      showError(err instanceof Error ? err.message : "Failed to analyze video");
     } finally {
       setAnalyzingVideo(false);
     }
@@ -183,22 +181,21 @@ export default function Home() {
 
   const handleGenerateStoryboard = async () => {
     if (!productDescription.trim()) {
-      setError("Please enter a product description");
+      showError("Please enter a product description");
       return;
     }
 
     if (!baseImage) {
-      setError("Please upload a base image");
+      showError("Please upload a base image");
       return;
     }
 
     if (!videoFile) {
-      setError("Please upload a UI screen recording");
+      showError("Please upload a UI screen recording");
       return;
     }
 
     setLoading(true);
-    setError(null);
 
     try {
       // Auto-analyze video first if available and not already analyzed
@@ -304,7 +301,7 @@ export default function Home() {
         }, 1000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      showError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -312,7 +309,7 @@ export default function Home() {
 
   const handleGenerateStill = async (shotId: string, prompt: string) => {
     if (!baseImage) {
-      setError("Please upload a base image before generating stills");
+      showError("Please upload a base image before generating stills");
       return;
     }
 
@@ -359,7 +356,7 @@ export default function Home() {
         return updated;
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate image");
+      showError(err instanceof Error ? err.message : "Failed to generate image");
     } finally {
       setGeneratingImages(prev => ({ ...prev, [shotId]: false }));
     }
@@ -368,7 +365,7 @@ export default function Home() {
   const handleGenerateVideo = async (shotId: string, prompt: string) => {
     const imageData = generatedImages[shotId];
     if (!imageData?.imageUrl) {
-      setError("Please generate a still image first before creating a video");
+      showError("Please generate a still image first before creating a video");
       return;
     }
 
@@ -383,7 +380,6 @@ export default function Home() {
     }
 
     setGeneratingVideos(prev => ({ ...prev, [shotId]: true }));
-    setError(null);
 
     try {
       const response = await fetch("/api/videos/generate", {
@@ -407,7 +403,7 @@ export default function Home() {
       const result: VideoGenerationResponse = await response.json();
       setGeneratedVideos(prev => ({ ...prev, [shotId]: result }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate video");
+      showError(err instanceof Error ? err.message : "Failed to generate video");
     } finally {
       setGeneratingVideos(prev => ({ ...prev, [shotId]: false }));
     }
@@ -415,12 +411,11 @@ export default function Home() {
 
   const handleExtractClip = async (shotId: string, startTime: number, endTime: number) => {
     if (!videoFile) {
-      setError("No video file uploaded");
+      showError("No video file uploaded");
       return;
     }
 
     setExtractingClips(prev => ({ ...prev, [shotId]: true }));
-    setError(null);
 
     try {
       const response = await fetch("/api/video/extract", {
@@ -455,7 +450,7 @@ export default function Home() {
       }));
     } catch (err) {
       console.error('Extraction error:', err);
-      setError(err instanceof Error ? err.message : "Failed to extract clip");
+      showError(err instanceof Error ? err.message : "Failed to extract clip");
     } finally {
       setExtractingClips(prev => ({ ...prev, [shotId]: false }));
     }
@@ -463,7 +458,6 @@ export default function Home() {
 
   const handleGenerateNarration = async (narrationId: string, text: string) => {
     setGeneratingNarration(prev => ({ ...prev, [narrationId]: true }));
-    setError(null);
 
     try {
       const response = await fetch("/api/narration/generate", {
@@ -498,7 +492,7 @@ export default function Home() {
       });
       audio.load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate narration");
+      showError(err instanceof Error ? err.message : "Failed to generate narration");
     } finally {
       setGeneratingNarration(prev => ({ ...prev, [narrationId]: false }));
     }
@@ -512,7 +506,6 @@ export default function Home() {
     if (!prompt || !sb) return;
 
     setGeneratingMusic(true);
-    setError(null);
 
     try {
       // Use custom duration if provided, otherwise calculate from storyboard
@@ -558,7 +551,7 @@ export default function Home() {
       });
       audio.load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate music");
+      showError(err instanceof Error ? err.message : "Failed to generate music");
     } finally {
       setGeneratingMusic(false);
     }
@@ -566,12 +559,11 @@ export default function Home() {
 
   const handleExportSizzleReel = async () => {
     if (!timeline || !storyboard || !generatedMusic) {
-      setError("Timeline, storyboard, and music are required for export");
+      showError("Timeline, storyboard, and music are required for export");
       return;
     }
 
     setExportingVideo(true);
-    setError(null);
     setExportedVideoUrl(null);
     setExportProgress("");
 
@@ -656,7 +648,7 @@ export default function Home() {
       setExportedVideoUrl(finalResult.videoUrl);
       setExportProgress("Complete!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to export sizzle reel");
+      showError(err instanceof Error ? err.message : "Failed to export sizzle reel");
       setExportProgress("");
     } finally {
       setExportingVideo(false);
@@ -844,12 +836,6 @@ export default function Home() {
                 </p>
               )}
             </div>
-
-            {error && (
-              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3 text-sm text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            )}
 
             {/* Generate Button */}
             <Button
