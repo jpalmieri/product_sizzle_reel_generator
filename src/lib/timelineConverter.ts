@@ -18,7 +18,7 @@ export function calculateStoryboardDuration(storyboard: StoryboardResponse): num
 
   for (const shot of storyboard.shots) {
     const duration = shot.shotType === 'ui'
-      ? (shot.endTime - shot.startTime)
+      ? Math.max(3, shot.endTime - shot.startTime) // UI clips minimum 3 seconds
       : 8; // cinematic shots are 8 seconds
 
     totalDuration += duration;
@@ -58,7 +58,7 @@ function createVideoTrack(shots: StoryboardShot[]): TimelineTrack {
 
   for (const shot of shots) {
     const duration = shot.shotType === 'ui'
-      ? (shot.endTime - shot.startTime)
+      ? Math.max(3, shot.endTime - shot.startTime) // UI clips minimum 3 seconds
       : 8; // cinematic shots are 8 seconds
 
     const clip: VideoClip = {

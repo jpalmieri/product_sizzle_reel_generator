@@ -51,7 +51,8 @@ Your storyboard should intelligently mix two types of shots based on what best t
    - Show specific UI interactions from the screen recording
    - Include "uiDescription" describing what's shown
    - Include "startTime" and "endTime" timestamps (in seconds) indicating which portion of the source recording to extract
-   - IMPORTANT: Choose a meaningful duration (typically 3-8 seconds) to give viewers time to understand the UI interaction
+   - CRITICAL: The duration (endTime - startTime) MUST be at least 3 seconds minimum
+   - Example: If video analysis shows "5.0s-5.5s: user taps button", expand it to at least "5.0s-8.0s" to include the interaction and its result
    - The clip will be extracted from the source recording and shown in the final sizzle reel for its full duration
    - Set "shotType": "ui"
 

@@ -45,13 +45,19 @@ IMPORTANT ACCURACY GUIDELINES:
 - Focus on visible UI changes, screen transitions, and clearly observable interactions
 
 For each distinct action or screen change that you can clearly see, create a segment with:
-- Start time (in seconds)
-- End time (in seconds)
+- Start time (in seconds, as a number)
+- End time (in seconds, as a number)
 - Clear, factual description of what's visible on screen
 
 Also provide:
 - An overall summary of what the video demonstrates (only what's actually visible)
-- Total video duration
+- Total video duration (in seconds, as a number)
+
+TIMESTAMP FORMAT REQUIREMENTS:
+- All times must be numeric values (not strings)
+- Use decimal seconds (e.g., 5.5, 10.2, not "5s" or "5.5s")
+- startTime and endTime must be numbers
+- duration must be a number
 
 Return your response as a JSON object with this exact structure:
 {
@@ -62,6 +68,11 @@ Return your response as a JSON object with this exact structure:
       "startTime": 0,
       "endTime": 5,
       "description": "User opens app and navigates to feature"
+    },
+    {
+      "startTime": 5,
+      "endTime": 12.5,
+      "description": "User interacts with main feature"
     }
   ]
 }
