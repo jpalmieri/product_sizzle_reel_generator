@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { EditablePromptButton } from "./EditablePromptButton";
 import type { NarrationSegment } from "@/types/storyboard";
 import type { NarrationGenerationResponse } from "@/types/narration";
 
@@ -22,26 +22,27 @@ export function NarrationEditor({
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span className="font-mono">{segment.startTime.toFixed(1)}s - {segment.endTime.toFixed(1)}s</span>
       </div>
-      <p className="text-sm italic">&quot;{segment.text}&quot;</p>
-      <div className="flex items-center gap-3">
-        <Button
-          onClick={() => onGenerateNarration(segment.id, segment.text)}
-          disabled={generatingNarration}
-          size="sm"
-          variant="outline"
-        >
-          {generatingNarration ? "Generating..." : "Generate Audio"}
-        </Button>
-        {generatedNarration && (
-          <audio
-            src={generatedNarration.audioUrl}
-            controls
-            className="h-8"
-          />
-        )}
-      </div>
+
+      <EditablePromptButton
+        initialPrompt={segment.text}
+        promptLabel="Narration Text"
+        buttonContent={generatingNarration ? "Generating..." : generatedNarration ? "Regenerate Audio" : "Generate Audio"}
+        onGenerate={(text) => onGenerateNarration(segment.id, text)}
+        disabled={generatingNarration}
+        variant={generatedNarration ? "outline" : "default"}
+        rightContent={
+          generatedNarration && (
+            <audio
+              src={generatedNarration.audioUrl}
+              controls
+              className="h-8"
+            />
+          )
+        }
+      />
+
       {generatedNarration && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground ml-6">
           Generated in {generatedNarration.processingTimeMs}ms
         </p>
       )}

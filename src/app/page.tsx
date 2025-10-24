@@ -457,6 +457,16 @@ export default function Home() {
   };
 
   const handleGenerateNarration = async (narrationId: string, text: string) => {
+    // Update storyboard with edited text to persist it
+    if (storyboard && storyboard.narration) {
+      setStoryboard({
+        ...storyboard,
+        narration: storyboard.narration.map(segment =>
+          segment.id === narrationId ? { ...segment, text } : segment
+        ),
+      });
+    }
+
     setGeneratingNarration(prev => ({ ...prev, [narrationId]: true }));
 
     try {
