@@ -127,6 +127,9 @@ export async function POST(request: NextRequest) {
 
     // Download the generated video from URI
     const generatedVideo = currentOperation.response.generatedVideos[0];
+    if (!generatedVideo?.video?.uri) {
+      throw new Error("No video URI in response");
+    }
     const videoUri = generatedVideo.video.uri;
 
     // Fetch the video data directly from the URI with API key authentication

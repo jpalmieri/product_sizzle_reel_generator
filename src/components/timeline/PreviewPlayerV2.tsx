@@ -36,7 +36,7 @@ export function PreviewPlayerV2({
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   const { allClips, videoClips, audioClips, totalDuration } = useTimelineClips(timeline);
 

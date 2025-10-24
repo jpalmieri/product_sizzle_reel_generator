@@ -234,11 +234,7 @@ export default function Home() {
 
       // Include video analysis if available
       if (analysisResult) {
-        requestBody.videoAnalysis = {
-          overallDescription: analysisResult.overallDescription,
-          duration: analysisResult.duration,
-          segments: analysisResult.segments,
-        };
+        requestBody.videoAnalysis = analysisResult;
       }
 
       const response = await fetch("/api/storyboard/generate", {

@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       }
 
       analysis = JSON.parse(cleanedText);
-    } catch (parseError) {
+    } catch {
       console.error("Failed to parse Gemini response:", responseText);
       return NextResponse.json(
         { error: "Failed to analyze video" },

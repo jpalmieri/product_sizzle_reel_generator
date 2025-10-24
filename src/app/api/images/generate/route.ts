@@ -15,7 +15,7 @@ const createDataUrl = (imageData: string, mimeType: string): string => {
 };
 
 // Helper function to process Gemini response and extract image data
-const processGeminiResponse = async (response: any) => {
+const processGeminiResponse = async (response: Awaited<ReturnType<typeof genAI.models.generateContent>>) => {
   if (response.candidates && response.candidates[0]) {
     const candidate = response.candidates[0];
 
@@ -63,7 +63,7 @@ Make this visually stunning, professional, and cinematic in quality. Reference i
     const startTime = Date.now();
 
     // Build the content array - only include base image
-    const contents: any[] = [{ text: enhancedPrompt }];
+    const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: enhancedPrompt }];
 
     // Add base image (required)
     const [mimeTypePart, base64Data] = body.baseImage.split(',');
