@@ -184,6 +184,7 @@ Create professional voiceover narration segments that flow naturally across the 
 - Narration should complement visuals, not repeat them
 - Example timing: A sentence might start at 2s (during shot 1) and end at 7s (during shot 2)
 - Total narration should cover key moments but allow breathing room with music-only sections
+- CRITICAL: All narration endTime values must be <= total video duration (sum of all shot durations)
 
 BACKGROUND MUSIC PROMPT (for ElevenLabs Music Generation):
 Create a detailed prompt for AI music generation that matches the emotional arc and pacing of this sizzle reel. Follow ElevenLabs prompt best practices:

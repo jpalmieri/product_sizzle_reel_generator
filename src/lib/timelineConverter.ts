@@ -90,15 +90,22 @@ function createVideoTrack(shots: StoryboardShot[]): TimelineTrack {
  * Music placeholder uses storyboard duration (updated with actual after generation)
  */
 function createAudioTrack(narration: NarrationSegment[], musicPrompt?: string, storyboardDuration?: number): TimelineTrack {
-  const audioClips: AudioClip[] = narration.map(segment => ({
-    id: `audio-${segment.id}`,
-    type: 'audio' as const,
-    audioType: 'narration' as const,
-    sourceId: segment.id,
-    text: segment.text,
-    startTime: segment.startTime,
-    duration: segment.endTime - segment.startTime,
-  }));
+  const audioClips: AudioClip[] = narration.map(segment => {
+    // Clamp narration to not extend beyond storyboard duration
+    const clampedEndTime = storyboardDuration
+      ? Math.min(segment.endTime, storyboardDuration)
+      : segment.endTime;
+
+    return {
+      id: `audio-${segment.id}`,
+      type: 'audio' as const,
+      audioType: 'narration' as const,
+      sourceId: segment.id,
+      text: segment.text,
+      startTime: segment.startTime,
+      duration: clampedEndTime - segment.startTime,
+    };
+  });
 
   // Add placeholder music clip if music prompt exists
   // Uses storyboard duration as initial size, allows clicking before generation
