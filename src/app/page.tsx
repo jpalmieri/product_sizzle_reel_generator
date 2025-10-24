@@ -21,10 +21,12 @@ import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calc
 export default function Home() {
   const [productDescription, setProductDescription] = useState("");
   const [baseImage, setBaseImage] = useState<string | null>(null);
-  const [videoFile, setVideoFile] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<string | null>(null); // Original video for clip extraction
+  const [compressedVideoFile, setCompressedVideoFile] = useState<string | null>(null); // Compressed for analysis
   const [videoMimeType, setVideoMimeType] = useState<string | null>(null);
   const [videoAnalysis, setVideoAnalysis] = useState<VideoAnalysisResponse | null>(null);
   const [analyzingVideo, setAnalyzingVideo] = useState(false);
+  const [compressingVideo, setCompressingVideo] = useState(false);
   const [storyboard, setStoryboard] = useState<StoryboardResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -88,28 +90,59 @@ export default function Home() {
       return;
     }
 
-    // Validate file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (file.size > maxSize) {
-      setError(`Video file too large. Maximum size is 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB. Please trim or compress your video.`);
-      return;
-    }
-
     setError(null);
     setVideoAnalysis(null); // Clear previous analysis
+    setCompressedVideoFile(null); // Clear previous compressed video
 
     // Convert to base64
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const result = e.target?.result as string;
-      setVideoFile(result);
+      setVideoFile(result); // Always store original for clip extraction
       setVideoMimeType(file.type);
+
+      // Check if compression is needed (over 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        // Compress for analysis
+        setCompressingVideo(true);
+        try {
+          const response = await fetch("/api/video/compress", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              videoData: result,
+              targetSizeMB: 9, // Stay under 10MB limit
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to compress video");
+          }
+
+          const compressionResult = await response.json();
+          setCompressedVideoFile(compressionResult.compressedVideo);
+
+          console.log(`Video compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressionResult.compressedSize / 1024 / 1024).toFixed(2)}MB (${(compressionResult.compressionRatio * 100).toFixed(0)}%)`);
+        } catch (err) {
+          setError(`Failed to compress video: ${err instanceof Error ? err.message : String(err)}`);
+          setVideoFile(null); // Clear video if compression fails
+        } finally {
+          setCompressingVideo(false);
+        }
+      } else {
+        // Under 10MB, use original for both analysis and extraction
+        setCompressedVideoFile(result);
+      }
     };
     reader.readAsDataURL(file);
   };
 
   const handleAnalyzeVideo = async () => {
-    if (!videoFile || !videoMimeType) {
+    if (!compressedVideoFile || !videoMimeType) {
       setError("Please upload a video first");
       return;
     }
@@ -124,7 +157,7 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          video: videoFile,
+          video: compressedVideoFile, // Use compressed version for analysis
           mimeType: videoMimeType,
         }),
       });
@@ -160,7 +193,7 @@ export default function Home() {
     try {
       // Auto-analyze video first if available and not already analyzed
       let analysisResult = videoAnalysis;
-      if (videoFile && !videoAnalysis) {
+      if (compressedVideoFile && !videoAnalysis) {
         setAnalyzingVideo(true);
         try {
           const response = await fetch("/api/video/analyze", {
@@ -169,7 +202,7 @@ export default function Home() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              video: videoFile,
+              video: compressedVideoFile, // Use compressed version for analysis
               mimeType: videoMimeType,
             }),
           });
@@ -700,7 +733,7 @@ export default function Home() {
             <div className="space-y-2">
               <label className="text-sm font-medium">UI Screen Recording (Optional)</label>
               <p className="text-xs text-muted-foreground">
-                Upload a screen recording of your app feature. The AI will analyze it and intelligently mix UI clips with cinematic shots. Max 10MB, recommended under 60 seconds.
+                Upload a screen recording of your app feature. The AI will analyze it and intelligently mix UI clips with cinematic shots. Large videos will be automatically compressed for analysis. Recommended under 60 seconds.
               </p>
               <Input
                 type="file"
@@ -709,7 +742,14 @@ export default function Home() {
               />
               {videoFile && (
                 <div className="space-y-2">
-                  {!videoAnalysis ? (
+                  {compressingVideo ? (
+                    <div className="border rounded-lg p-3 bg-blue-50 dark:bg-blue-950">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Compressing video...</p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        Large video detected - optimizing for analysis
+                      </p>
+                    </div>
+                  ) : !videoAnalysis ? (
                     <div className="border rounded-lg p-3 bg-muted">
                       <p className="text-sm font-medium">Video uploaded</p>
                       <p className="text-xs text-muted-foreground">Will be analyzed when you generate storyboard</p>
