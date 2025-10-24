@@ -61,6 +61,11 @@ export default function Home() {
     return acc;
   }, {} as Record<string, typeof storyboard.shots[0]>) || {};
 
+  // Check if all cinematic shots have generated videos
+  const allCinematicVideosGenerated = storyboard?.shots
+    .filter(shot => shot.shotType === 'cinematic')
+    .every(shot => generatedVideos[shot.id]) ?? false;
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -964,7 +969,7 @@ export default function Home() {
                 <div className="flex flex-col items-center gap-4 pt-6 border-t">
                   <Button
                     onClick={handleExportSizzleReel}
-                    disabled={exportingVideo}
+                    disabled={exportingVideo || !allCinematicVideosGenerated}
                     size="lg"
                     className="min-w-[200px]"
                   >
@@ -977,6 +982,12 @@ export default function Home() {
                       "Export Sizzle Reel"
                     )}
                   </Button>
+
+                  {!allCinematicVideosGenerated && !exportingVideo && (
+                    <p className="text-sm text-muted-foreground">
+                      Generate all cinematic videos to enable export
+                    </p>
+                  )}
 
                   {exportedVideoUrl && (
                     <div className="flex flex-col items-center gap-2">
