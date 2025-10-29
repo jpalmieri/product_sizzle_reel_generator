@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,8 +11,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+const HELP_MENU_SEEN_KEY = "sizzle-reel-help-menu-seen";
+
 export function Header() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    // Check if user has seen the help menu before
+    const hasSeenHelp = localStorage.getItem(HELP_MENU_SEEN_KEY);
+    if (!hasSeenHelp) {
+      setOpen(true);
+    }
+  }, []);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    // Mark help menu as seen when user closes it
+    if (!newOpen) {
+      localStorage.setItem(HELP_MENU_SEEN_KEY, "true");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -29,7 +47,7 @@ export function Header() {
           </h1>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button variant="ghost" className="rounded-full h-12 w-12 text-2xl font-semibold hover:bg-accent">
               ?
