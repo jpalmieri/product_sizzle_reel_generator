@@ -14,6 +14,7 @@ export interface VideoAnalysisSegment {
  * which informs storyboard generation about when to use UI clips vs cinematic shots.
  */
 export interface VideoAnalysisResponse {
+  videoId: string; // identifies which uploaded video this analysis is for
   segments: VideoAnalysisSegment[];
   overallDescription: string;
   duration: number; // total video duration in seconds
@@ -27,5 +28,18 @@ export interface VideoAnalysisResponse {
  */
 export interface VideoUploadRequest {
   video: string; // base64 encoded video data
+  mimeType: string;
+  videoId?: string; // optional identifier for the video
+}
+
+/**
+ * Represents an uploaded video file in the UI.
+ * Stores both original (for extraction) and compressed (for analysis) versions.
+ */
+export interface UploadedVideo {
+  id: string;
+  filename: string;
+  originalData: string; // base64 data URL for clip extraction
+  compressedData: string; // base64 data URL for analysis (may be same as original if <10MB)
   mimeType: string;
 }

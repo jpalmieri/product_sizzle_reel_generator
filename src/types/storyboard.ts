@@ -14,6 +14,7 @@ export interface CinematicShot extends BaseShotInfo {
 export interface UIShot extends BaseShotInfo {
   shotType: "ui";
   uiDescription: string;
+  videoId: string; // identifies which uploaded video to extract from
   startTime: number; // in seconds
   endTime: number; // in seconds
 }
@@ -37,7 +38,8 @@ export interface StoryboardResponse {
 
 export interface StoryboardGenerationRequest {
   productDescription: string;
-  videoAnalysis?: {
+  videoAnalyses?: Array<{
+    videoId: string;
     overallDescription: string;
     duration: number;
     segments: Array<{
@@ -45,5 +47,5 @@ export interface StoryboardGenerationRequest {
       endTime: number;
       description: string;
     }>;
-  };
+  }>;
 }

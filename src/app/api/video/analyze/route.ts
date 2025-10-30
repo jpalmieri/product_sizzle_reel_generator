@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result: VideoAnalysisResponse = {
+      videoId: body.videoId || 'default-video',
       ...analysis,
       processingTimeMs,
       timestamp: new Date().toISOString(),

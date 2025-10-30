@@ -8,6 +8,7 @@ import type { StillImageResponse } from "@/types/still-image";
 import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
 import type { MusicGenerationResponse, MusicDuckingSettings } from "@/types/music";
+import type { UploadedVideo } from "@/types/video-analysis";
 
 interface BlockEditorPanelProps {
   selectedBlockId: string | null;
@@ -22,12 +23,12 @@ interface BlockEditorPanelProps {
   generatedMusic: MusicGenerationResponse | null;
   generatingMusic: boolean;
   musicDuckingSettings: MusicDuckingSettings;
-  videoFile: string | null;
+  videoFiles: UploadedVideo[];
   baseImage: string | null;
   veoModel: 'veo-2' | 'veo-3';
   onGenerateStill: (shotId: string, prompt: string) => void;
   onGenerateVideo: (shotId: string, prompt: string) => void;
-  onExtractClip: (shotId: string, startTime: number, endTime: number) => void;
+  onExtractClip: (shotId: string, videoId: string, startTime: number, endTime: number) => void;
   onGenerateNarration: (narrationId: string, text: string) => void;
   onGenerateMusic: (prompt: string) => void;
   onMusicDuckingSettingsChange: (settings: MusicDuckingSettings) => void;
@@ -47,7 +48,7 @@ export function BlockEditorPanel({
   generatedMusic,
   generatingMusic,
   musicDuckingSettings,
-  videoFile,
+  videoFiles,
   baseImage,
   veoModel,
   onGenerateStill,
@@ -74,7 +75,7 @@ export function BlockEditorPanel({
           generatedVideo={generatedVideos[selectedShot.id]}
           generatingVideo={generatingVideos[selectedShot.id]}
           extractingClip={extractingClips[selectedShot.id]}
-          videoFile={videoFile}
+          videoFiles={videoFiles}
           baseImage={baseImage}
           veoModel={veoModel}
           onGenerateStill={onGenerateStill}

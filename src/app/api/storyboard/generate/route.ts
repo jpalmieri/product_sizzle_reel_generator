@@ -10,18 +10,22 @@ const GEMINI_MODEL = "gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `You are a creative director specializing in cinematic sizzle reels for software products and app features. Create compelling visual stories that showcase specific product functionality and user experience.`;
 
-const generateStoryboardPrompt = (productDescription: string, videoAnalysis?: StoryboardGenerationRequest["videoAnalysis"]) => {
-  const videoContext = videoAnalysis ? `
+const generateStoryboardPrompt = (productDescription: string, videoAnalyses?: StoryboardGenerationRequest["videoAnalyses"]) => {
+  const videoContext = videoAnalyses && videoAnalyses.length > 0 ? `
 
 UI SCREEN RECORDING ANALYSIS:
-The user has provided a ${videoAnalysis.duration}-second screen recording of the app feature. Here's what happens in it:
+The user has provided ${videoAnalyses.length} screen recording${videoAnalyses.length > 1 ? 's' : ''} of the app feature. Here's what happens in each:
 
-Overall: ${videoAnalysis.overallDescription}
+${videoAnalyses.map((analysis, index) => `
+VIDEO ${index + 1} (videoId: "${analysis.videoId}"):
+Duration: ${analysis.duration} seconds
+Overall: ${analysis.overallDescription}
 
 Timestamped segments:
-${videoAnalysis.segments.map(seg => `- ${seg.startTime}s-${seg.endTime}s: ${seg.description}`).join('\n')}
+${analysis.segments.map(seg => `- ${seg.startTime}s-${seg.endTime}s: ${seg.description}`).join('\n')}
+`).join('\n')}
 
-You can reference these specific UI moments by their timestamps when deciding to use UI shots.` : '';
+You can reference these specific UI moments by their timestamps when deciding to use UI shots. IMPORTANT: When using UI shots, you MUST include the "videoId" field to specify which video to extract the clip from.` : '';
 
   return `${SYSTEM_PROMPT}
 
@@ -47,8 +51,9 @@ Your storyboard should intelligently mix two types of shots based on what best t
    - Include "stillPrompt" and "videoPrompt" fields
    - Set "shotType": "cinematic"
 
-2. UI SHOTS (from screen recording): Actual product functionality${videoAnalysis ? '' : ' (optional - only if UI recording is provided)'}
+2. UI SHOTS (from screen recording): Actual product functionality${videoAnalyses && videoAnalyses.length > 0 ? '' : ' (optional - only if UI recording is provided)'}
    - Show specific UI interactions from the screen recording
+   - Include "videoId" field to specify which video to extract the clip from (REQUIRED)
    - Include "uiDescription" describing what's shown
    - Include "startTime" and "endTime" timestamps (in seconds) indicating which portion of the source recording to extract
    - CRITICAL: The duration (endTime - startTime) MUST be at least 3 seconds minimum
@@ -59,10 +64,11 @@ Your storyboard should intelligently mix two types of shots based on what best t
 SHOT SELECTION STRATEGY:
 Decide which shot type to use based on what best serves the story at each moment:
 - Use CINEMATIC shots when human emotion, context, or reaction tells the story better
-- Use UI shots when showing specific functionality or interface interaction is essential${videoAnalysis ? '' : ' (only if screen recording was provided)'}
+- Use UI shots when showing specific functionality or interface interaction is essential${videoAnalyses && videoAnalyses.length > 0 ? '' : ' (only if screen recording was provided)'}
 - You may use multiple cinematic shots in a row if that serves the narrative
 - You may use multiple UI shots in a row if demonstrating a complex workflow
 - The goal is effective storytelling, not rigid patterns
+${videoAnalyses && videoAnalyses.length > 1 ? `- When you have multiple videos available, choose the video that best demonstrates the specific interaction or feature for each UI shot` : ''}
 
 The cinematic story should be told through human behavior, emotional beats, and environmental storytelling focused on THIS SPECIFIC FEATURE.
 
@@ -86,10 +92,11 @@ Return your response as a JSON object with this exact structure:
       "title": "Shot title",
       "description": "What happens in this shot and why it's important",
       "uiDescription": "Description of what UI interaction to show",
+      "videoId": "video-id-from-analysis",
       "startTime": 5.0,
       "endTime": 10.5,
       "order": 2,
-      "note": "startTime/endTime should span 3-8 seconds to give viewers time to see and understand the UI"
+      "note": "startTime/endTime should span 3-8 seconds to give viewers time to see and understand the UI. videoId MUST match one of the provided video IDs from the analysis above"
     }
   ],
   "narration": [
@@ -247,7 +254,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = generateStoryboardPrompt(body.productDescription, body.videoAnalysis);
+    const prompt = generateStoryboardPrompt(body.productDescription, body.videoAnalyses);
 
     const startTime = Date.now();
     const response = await genAI.models.generateContent({

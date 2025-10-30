@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
-import type { VideoAnalysisResponse } from "@/types/video-analysis";
+import type { VideoAnalysisResponse, UploadedVideo } from "@/types/video-analysis";
 import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
 import type { MusicGenerationResponse, MusicDuckingSettings } from "@/types/music";
@@ -23,12 +24,15 @@ export default function Home() {
   const { showError } = useErrorToast();
   const [productDescription, setProductDescription] = useState("");
   const [baseImage, setBaseImage] = useState<string | null>(null);
-  const [videoFile, setVideoFile] = useState<string | null>(null); // Original video for clip extraction
-  const [compressedVideoFile, setCompressedVideoFile] = useState<string | null>(null); // Compressed for analysis
-  const [videoMimeType, setVideoMimeType] = useState<string | null>(null);
-  const [videoAnalysis, setVideoAnalysis] = useState<VideoAnalysisResponse | null>(null);
-  const [analyzingVideo, setAnalyzingVideo] = useState(false);
-  const [compressingVideo, setCompressingVideo] = useState(false);
+  const [videoFiles, setVideoFiles] = useState<UploadedVideo[]>([]);
+  const [videoAnalyses, setVideoAnalyses] = useState<Record<string, VideoAnalysisResponse>>({});
+  const [analyzingVideos, setAnalyzingVideos] = useState(false);
+  const [compressingVideos, setCompressingVideos] = useState<Record<string, boolean>>({});
+  const [uploadingVideosCount, setUploadingVideosCount] = useState(0);
+  const [totalVideosToUpload, setTotalVideosToUpload] = useState(0);
+  const [previewingVideo, setPreviewingVideo] = useState<UploadedVideo | null>(null);
+  const [deleteWarningOpen, setDeleteWarningOpen] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
   const [storyboard, setStoryboard] = useState<StoryboardResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -87,96 +91,141 @@ export default function Home() {
   };
 
   const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    // Validate file type
-    if (!file.type.startsWith('video/')) {
-      showError("Please select a valid video file");
-      return;
-    }
-    setVideoAnalysis(null); // Clear previous analysis
-    setCompressedVideoFile(null); // Clear previous compressed video
+    // Set total count for progress tracking
+    setTotalVideosToUpload(files.length);
+    setUploadingVideosCount(0);
 
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const result = e.target?.result as string;
-      setVideoFile(result); // Always store original for clip extraction
-      setVideoMimeType(file.type);
+    // Process each file
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
 
-      // Check if compression is needed (over 10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-      if (file.size > maxSize) {
-        // Compress for analysis
-        setCompressingVideo(true);
-        try {
-          const response = await fetch("/api/video/compress", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              videoData: result,
-              targetSizeMB: 9, // Stay under 10MB limit
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to compress video");
-          }
-
-          const compressionResult = await response.json();
-          setCompressedVideoFile(compressionResult.compressedVideo);
-
-          console.log(`Video compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressionResult.compressedSize / 1024 / 1024).toFixed(2)}MB (${(compressionResult.compressionRatio * 100).toFixed(0)}%)`);
-        } catch (err) {
-          showError(`Failed to compress video: ${err instanceof Error ? err.message : String(err)}`);
-          setVideoFile(null); // Clear video if compression fails
-        } finally {
-          setCompressingVideo(false);
-        }
-      } else {
-        // Under 10MB, use original for both analysis and extraction
-        setCompressedVideoFile(result);
+      // Validate file type
+      if (!file.type.startsWith('video/')) {
+        showError(`${file.name} is not a valid video file`);
+        continue;
       }
-    };
-    reader.readAsDataURL(file);
+
+      // Generate unique ID for this video
+      const videoId = `video-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Increment uploading count
+      setUploadingVideosCount(prev => prev + 1);
+
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const result = e.target?.result as string;
+
+        // Check if compression is needed (over 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        let compressedData = result;
+
+        if (file.size > maxSize) {
+          // Compress for analysis
+          setCompressingVideos(prev => ({ ...prev, [videoId]: true }));
+          try {
+            const response = await fetch("/api/video/compress", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                videoData: result,
+                targetSizeMB: 9, // Stay under 10MB limit
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Failed to compress video");
+            }
+
+            const compressionResult = await response.json();
+            compressedData = compressionResult.compressedVideo;
+
+            console.log(`${file.name} compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressionResult.compressedSize / 1024 / 1024).toFixed(2)}MB (${(compressionResult.compressionRatio * 100).toFixed(0)}%)`);
+          } catch (err) {
+            showError(`Failed to compress ${file.name}: ${err instanceof Error ? err.message : String(err)}`);
+            setCompressingVideos(prev => {
+              const updated = { ...prev };
+              delete updated[videoId];
+              return updated;
+            });
+            // Decrement uploading count on failure
+            setUploadingVideosCount(prev => Math.max(0, prev - 1));
+            return;
+          } finally {
+            setCompressingVideos(prev => {
+              const updated = { ...prev };
+              delete updated[videoId];
+              return updated;
+            });
+          }
+        }
+
+        // Add video to array
+        const uploadedVideo: UploadedVideo = {
+          id: videoId,
+          filename: file.name,
+          originalData: result,
+          compressedData,
+          mimeType: file.type,
+        };
+
+        setVideoFiles(prev => [...prev, uploadedVideo]);
+
+        // Decrement uploading count when done
+        setUploadingVideosCount(prev => Math.max(0, prev - 1));
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Clear the input so the same file can be uploaded again if deleted
+    event.target.value = '';
   };
 
-  const handleAnalyzeVideo = async () => {
-    if (!compressedVideoFile || !videoMimeType) {
-      showError("Please upload a video first");
+  const handleDeleteVideo = (videoId: string) => {
+    // If storyboard exists, show warning dialog
+    if (storyboard) {
+      setVideoToDelete(videoId);
+      setDeleteWarningOpen(true);
       return;
     }
 
-    setAnalyzingVideo(true);
+    // Otherwise delete immediately
+    confirmDeleteVideo(videoId);
+  };
 
-    try {
-      const response = await fetch("/api/video/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          video: compressedVideoFile, // Use compressed version for analysis
-          mimeType: videoMimeType,
-        }),
-      });
+  const confirmDeleteVideo = (videoId: string) => {
+    setVideoFiles(prev => prev.filter(v => v.id !== videoId));
+    setVideoAnalyses(prev => {
+      const updated = { ...prev };
+      delete updated[videoId];
+      return updated;
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to analyze video");
+    // Clear storyboard if it references the deleted video
+    if (storyboard) {
+      const hasDeletedVideoReference = storyboard.shots.some(
+        shot => shot.shotType === 'ui' && shot.videoId === videoId
+      );
+
+      if (hasDeletedVideoReference) {
+        setStoryboard(null);
+        setTimeline(null);
+        setGeneratedImages({});
+        setGeneratedVideos({});
+        setGeneratedNarration({});
+        setGeneratedMusic(null);
       }
-
-      const result: VideoAnalysisResponse = await response.json();
-      setVideoAnalysis(result);
-    } catch (err) {
-      showError(err instanceof Error ? err.message : "Failed to analyze video");
-    } finally {
-      setAnalyzingVideo(false);
     }
+
+    // Close dialog
+    setDeleteWarningOpen(false);
+    setVideoToDelete(null);
   };
 
   const handleGenerateStoryboard = async () => {
@@ -190,18 +239,34 @@ export default function Home() {
       return;
     }
 
-    if (!videoFile) {
-      showError("Please upload a UI screen recording");
+    if (videoFiles.length === 0) {
+      showError("Please upload at least one UI screen recording");
       return;
     }
+
+    // Clear all previous generated content before starting regeneration
+    setStoryboard(null);
+    setTimeline(null);
+    setGeneratedImages({});
+    setGeneratedVideos({});
+    setGeneratedNarration({});
+    setGeneratedMusic(null);
 
     setLoading(true);
 
     try {
-      // Auto-analyze video first if available and not already analyzed
-      let analysisResult = videoAnalysis;
-      if (compressedVideoFile && !videoAnalysis) {
-        setAnalyzingVideo(true);
+      // Auto-analyze all videos that haven't been analyzed yet
+      const analysisResults: VideoAnalysisResponse[] = [];
+      setAnalyzingVideos(true);
+
+      for (const video of videoFiles) {
+        // Check if we already have analysis for this video
+        if (videoAnalyses[video.id]) {
+          analysisResults.push(videoAnalyses[video.id]);
+          continue;
+        }
+
+        // Analyze this video
         try {
           const response = await fetch("/api/video/analyze", {
             method: "POST",
@@ -209,32 +274,53 @@ export default function Home() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              video: compressedVideoFile, // Use compressed version for analysis
-              mimeType: videoMimeType,
+              video: video.compressedData,
+              mimeType: video.mimeType,
+              videoId: video.id,
             }),
           });
 
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to analyze video");
+            throw new Error(errorData.error || `Failed to analyze ${video.filename}`);
           }
 
-          analysisResult = await response.json();
-          setVideoAnalysis(analysisResult);
+          const analysis: VideoAnalysisResponse = await response.json();
+          analysisResults.push(analysis);
+
+          // Store analysis
+          setVideoAnalyses(prev => ({ ...prev, [video.id]: analysis }));
         } catch (err) {
-          throw new Error(`Video analysis failed: ${err instanceof Error ? err.message : "Unknown error"}`);
-        } finally {
-          setAnalyzingVideo(false);
+          throw new Error(`Video analysis failed for ${video.filename}: ${err instanceof Error ? err.message : "Unknown error"}`);
         }
       }
 
-      const requestBody: { productDescription: string; videoAnalysis?: VideoAnalysisResponse } = {
+      setAnalyzingVideos(false);
+
+      const requestBody: {
+        productDescription: string;
+        videoAnalyses?: Array<{
+          videoId: string;
+          overallDescription: string;
+          duration: number;
+          segments: Array<{
+            startTime: number;
+            endTime: number;
+            description: string;
+          }>;
+        }>;
+      } = {
         productDescription: productDescription.trim(),
       };
 
-      // Include video analysis if available
-      if (analysisResult) {
-        requestBody.videoAnalysis = analysisResult;
+      // Include video analyses if available
+      if (analysisResults.length > 0) {
+        requestBody.videoAnalyses = analysisResults.map(analysis => ({
+          videoId: analysis.videoId,
+          overallDescription: analysis.overallDescription,
+          duration: analysis.duration,
+          segments: analysis.segments,
+        }));
       }
 
       const response = await fetch("/api/storyboard/generate", {
@@ -257,18 +343,14 @@ export default function Home() {
       const newTimeline = storyboardToTimeline(result);
       setTimeline(newTimeline);
 
-      setGeneratedImages({}); // Clear previous images when new storyboard is generated
-      setGeneratedVideos({}); // Clear previous videos when new storyboard is generated
-      setGeneratedNarration({}); // Clear previous narration when new storyboard is generated
-
       // Collapse input section after successful generation
       setIsInputSectionCollapsed(true);
 
-      // Automatically extract UI clips if video is available
-      if (videoFile) {
-        const uiShots = result.shots.filter(shot => shot.shotType === 'ui');
-        for (const shot of uiShots) {
-          handleExtractClip(shot.id, shot.startTime, shot.endTime);
+      // Automatically extract UI clips
+      const uiShots = result.shots.filter(shot => shot.shotType === 'ui');
+      for (const shot of uiShots) {
+        if (shot.shotType === 'ui') {
+          handleExtractClip(shot.id, shot.videoId, shot.startTime, shot.endTime);
         }
       }
 
@@ -405,9 +487,11 @@ export default function Home() {
     }
   };
 
-  const handleExtractClip = async (shotId: string, startTime: number, endTime: number) => {
-    if (!videoFile) {
-      showError("No video file uploaded");
+  const handleExtractClip = async (shotId: string, videoId: string, startTime: number, endTime: number) => {
+    // Find the video by ID
+    const video = videoFiles.find(v => v.id === videoId);
+    if (!video) {
+      showError(`Video not found for shot ${shotId}`);
       return;
     }
 
@@ -421,7 +505,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           shotId,
-          videoData: videoFile,
+          videoData: video.originalData, // Use original data for extraction
           startTime,
           endTime,
         }),
@@ -754,67 +838,82 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* Video Drop Zone */}
+              {/* Video Upload Zone */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">UI Screen Recording *</label>
+                <label className="text-sm font-medium">UI Screen Recordings *</label>
+
+                {/* List of uploaded videos */}
+                {videoFiles.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {videoFiles.map(video => (
+                      <div
+                        key={video.id}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors"
+                        onClick={() => setPreviewingVideo(video)}
+                      >
+                        <svg className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-purple-900 dark:text-purple-100 truncate">
+                            {video.filename}
+                          </p>
+                          {compressingVideos[video.id] && (
+                            <p className="text-xs text-purple-700 dark:text-purple-300">
+                              Compressing...
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVideo(video.id);
+                          }}
+                          disabled={loading}
+                          className="shrink-0 p-1 hover:bg-purple-200 dark:hover:bg-purple-900 rounded transition-colors disabled:opacity-50"
+                          aria-label="Delete video"
+                        >
+                          <svg className="h-4 w-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload progress indicator */}
+                {uploadingVideosCount > 0 && (
+                  <div className="flex items-center gap-2 p-3 border rounded-lg bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full shrink-0"></div>
+                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                      Processing {totalVideosToUpload - uploadingVideosCount} of {totalVideosToUpload} video{totalVideosToUpload > 1 ? 's' : ''}...
+                    </p>
+                  </div>
+                )}
+
+                {/* Upload drop zone */}
                 <div className="relative">
                   <input
                     type="file"
                     accept="video/*"
+                    multiple
                     onChange={handleVideoUpload}
                     disabled={loading}
                     className={`absolute inset-0 w-full h-full opacity-0 z-10 ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   />
                   <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    videoFile
-                      ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-950'
+                    videoFiles.length > 0
+                      ? 'border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/50'
                       : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600'
                   }`}>
-                    {compressingVideo ? (
-                      <div className="space-y-2">
-                        <div className="animate-spin mx-auto h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full"></div>
-                        <p className="text-sm font-medium">Compressing video...</p>
-                        <p className="text-xs text-muted-foreground">Optimizing for analysis</p>
-                      </div>
-                    ) : videoFile ? (
-                      <div className="space-y-2">
-                        <svg className="mx-auto h-12 w-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        {analyzingVideo ? (
-                          <>
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="animate-spin h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full"></div>
-                              <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                                Analyzing video...
-                              </p>
-                            </div>
-                            <p className="text-xs text-purple-700 dark:text-purple-300">
-                              Identifying UI segments and actions
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                              {videoAnalysis ? '✓ Video analyzed' : 'Video uploaded'}
-                            </p>
-                            {videoAnalysis && (
-                              <p className="text-xs text-purple-700 dark:text-purple-300">
-                                {videoAnalysis.duration.toFixed(1)}s • {videoAnalysis.segments.length} segments
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <svg className="mx-auto h-12 w-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        <p className="mt-2 text-sm font-medium">Drop screen recording here</p>
-                        <p className="text-xs text-muted-foreground">MP4, MOV (auto-compressed if large)</p>
-                      </>
-                    )}
+                    <svg className="mx-auto h-12 w-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <p className="mt-2 text-sm font-medium">
+                      {videoFiles.length > 0 ? 'Drop more videos here or click' : 'Drop screen recordings here'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">MP4, MOV (auto-compressed if large)</p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -837,7 +936,7 @@ export default function Home() {
               />
               {loading && (
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                  {analyzingVideo ? 'Analyzing video...' : 'Generating storyboard...'}
+                  {analyzingVideos ? 'Analyzing videos...' : 'Generating storyboard...'}
                 </p>
               )}
             </div>
@@ -845,7 +944,14 @@ export default function Home() {
             {/* Generate Button */}
             <Button
               onClick={handleGenerateStoryboard}
-              disabled={loading || !productDescription.trim() || !baseImage || !videoFile}
+              disabled={
+                loading ||
+                !productDescription.trim() ||
+                !baseImage ||
+                videoFiles.length === 0 ||
+                uploadingVideosCount > 0 ||
+                Object.keys(compressingVideos).length > 0
+              }
               size="lg"
               className={`w-full text-white ${
                 loading
@@ -895,7 +1001,7 @@ export default function Home() {
                 </div>
                 <div className="flex gap-4 text-xs text-muted-foreground">
                   {baseImage && <span>✓ Character image uploaded</span>}
-                  {videoFile && <span>✓ UI recording uploaded</span>}
+                  {videoFiles.length > 0 && <span>✓ {videoFiles.length} video{videoFiles.length > 1 ? 's' : ''} uploaded</span>}
                 </div>
               </div>
             </CardContent>
@@ -1008,7 +1114,7 @@ export default function Home() {
                 generatedMusic={generatedMusic}
                 generatingMusic={generatingMusic}
                 musicDuckingSettings={musicDuckingSettings}
-                videoFile={videoFile}
+                videoFiles={videoFiles}
                 baseImage={baseImage}
                 veoModel={veoModel}
                 onGenerateStill={handleGenerateStill}
@@ -1022,6 +1128,67 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
+
+        {/* Video Preview Dialog */}
+        <Dialog open={!!previewingVideo} onOpenChange={(open) => !open && setPreviewingVideo(null)}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{previewingVideo?.filename}</DialogTitle>
+            </DialogHeader>
+            {previewingVideo && (
+              <div className="space-y-3">
+                <video
+                  key={previewingVideo.id}
+                  src={previewingVideo.compressedData}
+                  controls
+                  controlsList="nodownload"
+                  autoPlay
+                  className="w-full h-auto rounded-lg bg-black"
+                  style={{ maxHeight: '70vh' }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+                <p className="text-xs text-muted-foreground">
+                  Preview of compressed video used for analysis
+                </p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Video Warning Dialog */}
+        <Dialog open={deleteWarningOpen} onOpenChange={setDeleteWarningOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Warning: Delete UI Video</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Deleting a UI video after generating a storyboard may cause issues with the timeline and video clips.
+              </p>
+              <p className="text-sm font-medium">
+                Recommended: Refresh the page and re-upload all assets to start fresh.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteWarningOpen(false);
+                    setVideoToDelete(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => videoToDelete && confirmDeleteVideo(videoToDelete)}
+                >
+                  Delete Anyway
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

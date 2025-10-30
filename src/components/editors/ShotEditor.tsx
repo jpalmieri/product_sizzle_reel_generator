@@ -5,6 +5,7 @@ import { EditablePromptButton } from "./EditablePromptButton";
 import type { StoryboardShot } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
 import type { VideoGenerationResponse } from "@/types/video-generation";
+import type { UploadedVideo } from "@/types/video-analysis";
 
 interface ShotEditorProps {
   shot: StoryboardShot;
@@ -13,12 +14,12 @@ interface ShotEditorProps {
   generatedVideo?: VideoGenerationResponse;
   generatingVideo?: boolean;
   extractingClip?: boolean;
-  videoFile?: string | null;
+  videoFiles: UploadedVideo[];
   baseImage?: string | null;
   veoModel: 'veo-2' | 'veo-3';
   onGenerateStill: (shotId: string, prompt: string) => void;
   onGenerateVideo: (shotId: string, prompt: string) => void;
-  onExtractClip: (shotId: string, startTime: number, endTime: number) => void;
+  onExtractClip: (shotId: string, videoId: string, startTime: number, endTime: number) => void;
   onVeoModelChange: (model: 'veo-2' | 'veo-3') => void;
 }
 
@@ -29,7 +30,7 @@ export function ShotEditor({
   generatedVideo,
   generatingVideo,
   extractingClip,
-  videoFile,
+  videoFiles,
   baseImage,
   veoModel,
   onGenerateStill,
@@ -37,6 +38,8 @@ export function ShotEditor({
   onExtractClip,
   onVeoModelChange,
 }: ShotEditorProps) {
+  // For UI shots, find the source video
+  const sourceVideo = shot.shotType === 'ui' ? videoFiles.find(v => v.id === shot.videoId) : null;
   return (
     <div className="border-l-4 border-primary pl-6 space-y-4">
       <div className="flex items-center gap-2">
@@ -202,7 +205,7 @@ export function ShotEditor({
             </p>
           </div>
 
-          {videoFile && (
+          {sourceVideo && (
             <div className="border rounded-lg p-4 bg-background max-w-md space-y-3">
               {generatedVideo ? (
                 <>
@@ -217,7 +220,7 @@ export function ShotEditor({
                     ✓ Extracted clip ready
                   </p>
                   <Button
-                    onClick={() => onExtractClip(shot.id, shot.startTime, shot.endTime)}
+                    onClick={() => onExtractClip(shot.id, shot.videoId, shot.startTime, shot.endTime)}
                     disabled={extractingClip}
                     variant="outline"
                     size="sm"
@@ -232,7 +235,7 @@ export function ShotEditor({
               ) : (
                 <>
                   <video
-                    src={`${videoFile}#t=${shot.startTime},${shot.endTime}`}
+                    src={`${sourceVideo.originalData}#t=${shot.startTime},${shot.endTime}`}
                     controls
                     className="w-full h-auto rounded-md"
                     preload="metadata"
@@ -243,7 +246,7 @@ export function ShotEditor({
                     Preview: {shot.startTime.toFixed(1)}s - {shot.endTime.toFixed(1)}s
                   </p>
                   <Button
-                    onClick={() => onExtractClip(shot.id, shot.startTime, shot.endTime)}
+                    onClick={() => onExtractClip(shot.id, shot.videoId, shot.startTime, shot.endTime)}
                     disabled={extractingClip}
                     variant="default"
                     size="sm"
