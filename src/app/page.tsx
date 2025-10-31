@@ -27,6 +27,7 @@ export default function Home() {
   const [videoFiles, setVideoFiles] = useState<UploadedVideo[]>([]);
   const [videoAnalyses, setVideoAnalyses] = useState<Record<string, VideoAnalysisResponse>>({});
   const [analyzingVideos, setAnalyzingVideos] = useState(false);
+  const [currentAnalyzingVideo, setCurrentAnalyzingVideo] = useState<{ current: number; total: number; filename: string } | null>(null);
   const [compressingVideos, setCompressingVideos] = useState<Record<string, boolean>>({});
   const [uploadingVideosCount, setUploadingVideosCount] = useState(0);
   const [totalVideosToUpload, setTotalVideosToUpload] = useState(0);
@@ -257,7 +258,15 @@ export default function Home() {
     try {
       // Auto-analyze all videos that haven't been analyzed yet
       const analysisResults: VideoAnalysisResponse[] = [];
-      setAnalyzingVideos(true);
+
+      // Calculate how many videos need analysis
+      const videosToAnalyze = videoFiles.filter(v => !videoAnalyses[v.id]);
+      const totalToAnalyze = videosToAnalyze.length;
+      let currentIndex = 0;
+
+      if (totalToAnalyze > 0) {
+        setAnalyzingVideos(true);
+      }
 
       for (const video of videoFiles) {
         // Check if we already have analysis for this video
@@ -265,6 +274,14 @@ export default function Home() {
           analysisResults.push(videoAnalyses[video.id]);
           continue;
         }
+
+        // Update progress
+        currentIndex++;
+        setCurrentAnalyzingVideo({
+          current: currentIndex,
+          total: totalToAnalyze,
+          filename: video.filename
+        });
 
         // Analyze this video
         try {
@@ -296,6 +313,7 @@ export default function Home() {
       }
 
       setAnalyzingVideos(false);
+      setCurrentAnalyzingVideo(null);
 
       const requestBody: {
         productDescription: string;
@@ -382,6 +400,8 @@ export default function Home() {
       showError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+      setAnalyzingVideos(false);
+      setCurrentAnalyzingVideo(null);
     }
   };
 
@@ -935,9 +955,26 @@ export default function Home() {
                 disabled={loading}
               />
               {loading && (
-                <p className="text-xs text-blue-600 dark:text-blue-400">
-                  {analyzingVideos ? 'Analyzing videos...' : 'Generating storyboard...'}
-                </p>
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      {currentAnalyzingVideo
+                        ? `Analyzing video ${currentAnalyzingVideo.current} of ${currentAnalyzingVideo.total}: ${currentAnalyzingVideo.filename}`
+                        : analyzingVideos
+                        ? 'Preparing video analysis...'
+                        : 'Generating storyboard...'}
+                    </p>
+                  </div>
+                  {currentAnalyzingVideo && (
+                    <div className="mt-2 h-1.5 bg-blue-200 dark:bg-blue-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-500"
+                        style={{ width: `${(currentAnalyzingVideo.current / currentAnalyzingVideo.total) * 100}%` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
