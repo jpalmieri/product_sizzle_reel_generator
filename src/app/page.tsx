@@ -17,6 +17,7 @@ import { TimelineV2 } from "@/components/timeline/TimelineV2";
 import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
 import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
 import { UploadSection } from "@/components/upload/UploadSection";
+import { ExportSection } from "@/components/export/ExportSection";
 import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calculateStoryboardDuration, addMusicToTimeline } from "@/lib/timelineConverter";
 import { useErrorToast } from "@/hooks/use-error-toast";
 import { generateStoryboard } from "@/services/storyboardService";
@@ -825,45 +826,16 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Export Section */}
-              {timeline && Object.keys(generatedVideos).length > 0 && (
-                <div className="flex flex-col items-center gap-4 pt-6 border-t">
-                  <Button
-                    onClick={handleExportSizzleReel}
-                    disabled={exportingVideo || !allCinematicVideosGenerated}
-                    size="lg"
-                    className="min-w-[200px]"
-                  >
-                    {exportingVideo ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                        {exportProgress || "Exporting..."}
-                      </>
-                    ) : (
-                      "Export Sizzle Reel"
-                    )}
-                  </Button>
-
-                  {!allCinematicVideosGenerated && !exportingVideo && (
-                    <p className="text-sm text-muted-foreground">
-                      Generate all cinematic videos to enable export
-                    </p>
-                  )}
-
-                  {exportedVideoUrl && (
-                    <div className="flex flex-col items-center gap-2">
-                      <p className="text-sm text-green-600 font-medium">Sizzle reel complete!</p>
-                      <Button
-                        onClick={handleDownloadVideo}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Download Video
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+              <ExportSection
+                hasTimeline={!!timeline}
+                hasGeneratedVideos={Object.keys(generatedVideos).length > 0}
+                exportingVideo={exportingVideo}
+                exportProgress={exportProgress}
+                allCinematicVideosGenerated={allCinematicVideosGenerated}
+                exportedVideoUrl={exportedVideoUrl}
+                onExport={handleExportSizzleReel}
+                onDownload={handleDownloadVideo}
+              />
 
               <BlockEditorPanel
                 selectedBlockId={selectedBlockId}
