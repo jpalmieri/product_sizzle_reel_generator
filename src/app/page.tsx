@@ -16,7 +16,7 @@ import type { Timeline as TimelineType } from "@/types/timeline";
 import { TimelineV2 } from "@/components/timeline/TimelineV2";
 import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
 import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
-import { UploadProgressIndicator } from "@/components/upload/UploadProgressIndicator";
+import { UploadSection } from "@/components/upload/UploadSection";
 import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calculateStoryboardDuration, addMusicToTimeline } from "@/lib/timelineConverter";
 import { useErrorToast } from "@/hooks/use-error-toast";
 import { generateStoryboard } from "@/services/storyboardService";
@@ -656,128 +656,18 @@ export default function Home() {
             </div>
           </CardHeader>
           <CardContent className={`space-y-6 ${isInputSectionCollapsed ? 'hidden' : ''}`}>
-            {/* Upload Zones Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Character Image Drop Zone */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Character Image *</label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={loading}
-                    className={`absolute inset-0 w-full h-full opacity-0 z-10 ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                  />
-                  <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    baseImage
-                      ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950'
-                      : 'border-gray-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'
-                  }`}>
-                    {baseImage ? (
-                      <div className="space-y-2">
-                        <img
-                          src={baseImage}
-                          alt="Character reference"
-                          className="w-24 h-24 object-cover rounded-lg mx-auto"
-                        />
-                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">✓ Character uploaded</p>
-                      </div>
-                    ) : (
-                      <>
-                        <svg className="mx-auto h-12 w-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <p className="mt-2 text-sm font-medium">Drop character image here</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Note: Photo orientation/aspect ratio may influence cinematic shot composition
-                </p>
-              </div>
-
-              {/* Video Upload Zone */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">UI Screen Recordings *</label>
-
-                {/* List of uploaded videos */}
-                {videoFiles.length > 0 && (
-                  <div className="space-y-2 mb-3">
-                    {videoFiles.map(video => (
-                      <div
-                        key={video.id}
-                        className="flex items-center gap-3 p-3 border rounded-lg bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors"
-                        onClick={() => setPreviewingVideo(video)}
-                      >
-                        <svg className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-purple-900 dark:text-purple-100 truncate">
-                            {video.filename}
-                          </p>
-                          {compressingVideos[video.id] && (
-                            <p className="text-xs text-purple-700 dark:text-purple-300">
-                              Compressing...
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteVideo(video.id);
-                          }}
-                          disabled={loading}
-                          className="shrink-0 p-1 hover:bg-purple-200 dark:hover:bg-purple-900 rounded transition-colors disabled:opacity-50"
-                          aria-label="Delete video"
-                        >
-                          <svg className="h-4 w-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Upload progress indicator */}
-                <UploadProgressIndicator
-                  current={uploadingVideosCount}
-                  total={totalVideosToUpload}
-                />
-
-                {/* Upload drop zone */}
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    multiple
-                    onChange={handleVideoUpload}
-                    disabled={loading}
-                    className={`absolute inset-0 w-full h-full opacity-0 z-10 ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                  />
-                  <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    videoFiles.length > 0
-                      ? 'border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/50'
-                      : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600'
-                  }`}>
-                    <svg className="mx-auto h-12 w-12 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <p className="mt-2 text-sm font-medium">
-                      {videoFiles.length > 0 ? 'Drop more videos here or click' : 'Drop screen recordings here'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">MP4, MOV (auto-compressed if large)</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Note: Best results with videos under 60 seconds
-                </p>
-              </div>
-            </div>
+            <UploadSection
+              baseImage={baseImage}
+              onImageUpload={handleImageUpload}
+              videoFiles={videoFiles}
+              compressingVideos={compressingVideos}
+              uploadingVideosCount={uploadingVideosCount}
+              totalVideosToUpload={totalVideosToUpload}
+              onVideoUpload={handleVideoUpload}
+              onPreviewVideo={setPreviewingVideo}
+              onDeleteVideo={handleDeleteVideo}
+              disabled={loading}
+            />
 
             {/* Product Description */}
             <div className="space-y-2">
