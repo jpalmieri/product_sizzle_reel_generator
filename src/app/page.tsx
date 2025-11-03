@@ -20,11 +20,11 @@ import { UploadSection } from "@/components/upload/UploadSection";
 import { ExportSection } from "@/components/export/ExportSection";
 import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calculateStoryboardDuration, addMusicToTimeline } from "@/lib/timelineConverter";
 import { useErrorToast } from "@/hooks/use-error-toast";
+import { useExportSizzleReel } from "@/hooks/useExportSizzleReel";
 import { generateStoryboard } from "@/services/storyboardService";
 import { analyzeVideo, extractClip } from "@/services/videoService";
 import { generateStillImage, generateVideo } from "@/services/mediaService";
 import { generateNarration, generateMusic } from "@/services/audioService";
-import { stitchVideoClips, assembleNarrationTrack, duckMusicTrack, assembleFinalVideo } from "@/services/exportService";
 
 export default function Home() {
   const { showError } = useErrorToast();
@@ -63,9 +63,23 @@ export default function Home() {
   const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false);
-  const [exportingVideo, setExportingVideo] = useState(false);
-  const [exportProgress, setExportProgress] = useState<string>("");
-  const [exportedVideoUrl, setExportedVideoUrl] = useState<string | null>(null);
+
+  // Export hook
+  const {
+    exportingVideo,
+    exportProgress,
+    exportedVideoUrl,
+    handleExportSizzleReel,
+    handleDownloadVideo
+  } = useExportSizzleReel({
+    timeline,
+    storyboard,
+    generatedMusic,
+    generatedNarration,
+    generatedVideos,
+    generatedImages,
+    musicDuckingSettings,
+  });
 
   // Create shots lookup for timeline components
   const shotsLookup = storyboard?.shots.reduce((acc, shot) => {
@@ -551,72 +565,6 @@ export default function Home() {
     } finally {
       setGeneratingMusic(false);
     }
-  };
-
-  const handleExportSizzleReel = async () => {
-    if (!timeline || !storyboard || !generatedMusic) {
-      showError("Timeline, storyboard, and music are required for export");
-      return;
-    }
-
-    setExportingVideo(true);
-    setExportedVideoUrl(null);
-    setExportProgress("");
-
-    try {
-      // Step 1: Stitch video clips
-      setExportProgress("Stitching video clips...");
-      const videoResult = await stitchVideoClips(
-        timeline,
-        shotsLookup,
-        generatedVideos,
-        generatedImages
-      );
-
-      // Step 2: Assemble narration track
-      setExportProgress("Assembling narration track...");
-      const narrationResult = await assembleNarrationTrack(
-        timeline,
-        generatedNarration,
-        timeline.totalDuration
-      );
-
-      // Step 3: Duck music track
-      setExportProgress("Ducking music track...");
-      const musicResult = await duckMusicTrack(
-        generatedMusic.audioUrl,
-        timeline,
-        musicDuckingSettings,
-        timeline.totalDuration
-      );
-
-      // Step 4: Final assembly - mix audio + video
-      setExportProgress("Mixing audio and video...");
-      const finalResult = await assembleFinalVideo(
-        videoResult.videoUrl,
-        narrationResult.audioUrl,
-        musicResult.audioUrl
-      );
-      setExportedVideoUrl(finalResult.videoUrl);
-      setExportProgress("Complete!");
-    } catch (err) {
-      showError(err instanceof Error ? err.message : "Failed to export sizzle reel");
-      setExportProgress("");
-    } finally {
-      setExportingVideo(false);
-    }
-  };
-
-  const handleDownloadVideo = () => {
-    if (!exportedVideoUrl) return;
-
-    // Create download link
-    const link = document.createElement('a');
-    link.href = exportedVideoUrl;
-    link.download = `sizzle-reel-${Date.now()}.mp4`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
