@@ -5,7 +5,6 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
@@ -19,6 +18,11 @@ import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
 import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
 import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calculateStoryboardDuration, addMusicToTimeline } from "@/lib/timelineConverter";
 import { useErrorToast } from "@/hooks/use-error-toast";
+import { generateStoryboard } from "@/services/storyboardService";
+import { analyzeVideo, extractClip } from "@/services/videoService";
+import { generateStillImage, generateVideo } from "@/services/mediaService";
+import { generateNarration, generateMusic } from "@/services/audioService";
+import { stitchVideoClips, assembleNarrationTrack, duckMusicTrack, assembleFinalVideo } from "@/services/exportService";
 
 export default function Home() {
   const { showError } = useErrorToast();
@@ -285,24 +289,11 @@ export default function Home() {
 
         // Analyze this video
         try {
-          const response = await fetch("/api/video/analyze", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              video: video.compressedData,
-              mimeType: video.mimeType,
-              videoId: video.id,
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to analyze ${video.filename}`);
-          }
-
-          const analysis: VideoAnalysisResponse = await response.json();
+          const analysis = await analyzeVideo(
+            video.compressedData,
+            video.mimeType,
+            video.id
+          );
           analysisResults.push(analysis);
 
           // Store analysis
@@ -315,46 +306,10 @@ export default function Home() {
       setAnalyzingVideos(false);
       setCurrentAnalyzingVideo(null);
 
-      const requestBody: {
-        productDescription: string;
-        videoAnalyses?: Array<{
-          videoId: string;
-          overallDescription: string;
-          duration: number;
-          segments: Array<{
-            startTime: number;
-            endTime: number;
-            description: string;
-          }>;
-        }>;
-      } = {
-        productDescription: productDescription.trim(),
-      };
-
-      // Include video analyses if available
-      if (analysisResults.length > 0) {
-        requestBody.videoAnalyses = analysisResults.map(analysis => ({
-          videoId: analysis.videoId,
-          overallDescription: analysis.overallDescription,
-          duration: analysis.duration,
-          segments: analysis.segments,
-        }));
-      }
-
-      const response = await fetch("/api/storyboard/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate storyboard");
-      }
-
-      const result: StoryboardResponse = await response.json();
+      const result = await generateStoryboard(
+        productDescription,
+        analysisResults
+      );
       setStoryboard(result);
 
       // Convert storyboard to timeline
@@ -426,25 +381,12 @@ export default function Home() {
     const previousShots: string[] = [];
 
     try {
-      const response = await fetch("/api/images/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          shotId,
-          prompt,
-          baseImage,
-          previousShots,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate image");
-      }
-
-      const result: StillImageResponse = await response.json();
+      const result = await generateStillImage(
+        shotId,
+        prompt,
+        baseImage,
+        previousShots
+      );
       setGeneratedImages(prev => ({ ...prev, [shotId]: result }));
 
       // Clear any existing video for this shot since the still has changed
@@ -480,25 +422,12 @@ export default function Home() {
     setGeneratingVideos(prev => ({ ...prev, [shotId]: true }));
 
     try {
-      const response = await fetch("/api/videos/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          shotId,
-          imageUrl: imageData.imageUrl,
-          prompt,
-          model: veoModel,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate video");
-      }
-
-      const result: VideoGenerationResponse = await response.json();
+      const result = await generateVideo(
+        shotId,
+        imageData.imageUrl,
+        prompt,
+        veoModel
+      );
       setGeneratedVideos(prev => ({ ...prev, [shotId]: result }));
     } catch (err) {
       showError(err instanceof Error ? err.message : "Failed to generate video");
@@ -518,25 +447,12 @@ export default function Home() {
     setExtractingClips(prev => ({ ...prev, [shotId]: true }));
 
     try {
-      const response = await fetch("/api/video/extract", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          shotId,
-          videoData: video.originalData, // Use original data for extraction
-          startTime,
-          endTime,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to extract clip");
-      }
-
-      const result = await response.json();
+      const result = await extractClip(
+        shotId,
+        video.originalData, // Use original data for extraction
+        startTime,
+        endTime
+      );
       // Store extracted clip in generatedVideos like cinematic videos
       setGeneratedVideos(prev => ({
         ...prev,
@@ -570,23 +486,7 @@ export default function Home() {
     setGeneratingNarration(prev => ({ ...prev, [narrationId]: true }));
 
     try {
-      const response = await fetch("/api/narration/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          narrationId,
-          text,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate narration");
-      }
-
-      const result: NarrationGenerationResponse = await response.json();
+      const result = await generateNarration(narrationId, text);
       setGeneratedNarration(prev => ({ ...prev, [narrationId]: result }));
 
       // Load audio to get actual duration and update timeline
@@ -623,23 +523,7 @@ export default function Home() {
         ? customDurationMs
         : Math.round(calculateStoryboardDuration(sb) * 1000);
 
-      const response = await fetch("/api/music/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          durationMs,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate music");
-      }
-
-      const result: MusicGenerationResponse = await response.json();
+      const result = await generateMusic(prompt, durationMs);
       setGeneratedMusic(result);
 
       // Load audio to get actual duration and add to timeline
@@ -680,81 +564,37 @@ export default function Home() {
     try {
       // Step 1: Stitch video clips
       setExportProgress("Stitching video clips...");
-      const videoResponse = await fetch("/api/video/stitch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          timeline,
-          shots: shotsLookup,
-          generatedVideos,
-          generatedImages,
-        }),
-      });
-
-      if (!videoResponse.ok) {
-        const errorData = await videoResponse.json();
-        throw new Error(errorData.error || "Failed to stitch video");
-      }
-
-      const videoResult = await videoResponse.json();
+      const videoResult = await stitchVideoClips(
+        timeline,
+        shotsLookup,
+        generatedVideos,
+        generatedImages
+      );
 
       // Step 2: Assemble narration track
       setExportProgress("Assembling narration track...");
-      const narrationResponse = await fetch("/api/audio/narration/assemble", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          timeline,
-          generatedNarration,
-          totalDuration: timeline.totalDuration,
-        }),
-      });
-
-      if (!narrationResponse.ok) {
-        const errorData = await narrationResponse.json();
-        throw new Error(errorData.error || "Failed to assemble narration");
-      }
-
-      const narrationResult = await narrationResponse.json();
+      const narrationResult = await assembleNarrationTrack(
+        timeline,
+        generatedNarration,
+        timeline.totalDuration
+      );
 
       // Step 3: Duck music track
       setExportProgress("Ducking music track...");
-      const musicResponse = await fetch("/api/audio/music/duck", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          musicUrl: generatedMusic.audioUrl,
-          timeline,
-          duckingSettings: musicDuckingSettings,
-          totalDuration: timeline.totalDuration,
-        }),
-      });
-
-      if (!musicResponse.ok) {
-        const errorData = await musicResponse.json();
-        throw new Error(errorData.error || "Failed to duck music");
-      }
-
-      const musicResult = await musicResponse.json();
+      const musicResult = await duckMusicTrack(
+        generatedMusic.audioUrl,
+        timeline,
+        musicDuckingSettings,
+        timeline.totalDuration
+      );
 
       // Step 4: Final assembly - mix audio + video
       setExportProgress("Mixing audio and video...");
-      const assembleResponse = await fetch("/api/video/assemble", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoUrl: videoResult.videoUrl,
-          narrationAudioUrl: narrationResult.audioUrl,
-          musicAudioUrl: musicResult.audioUrl,
-        }),
-      });
-
-      if (!assembleResponse.ok) {
-        const errorData = await assembleResponse.json();
-        throw new Error(errorData.error || "Failed to assemble final video");
-      }
-
-      const finalResult = await assembleResponse.json();
+      const finalResult = await assembleFinalVideo(
+        videoResult.videoUrl,
+        narrationResult.audioUrl,
+        musicResult.audioUrl
+      );
       setExportedVideoUrl(finalResult.videoUrl);
       setExportProgress("Complete!");
     } catch (err) {
