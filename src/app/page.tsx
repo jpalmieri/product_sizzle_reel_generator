@@ -16,6 +16,7 @@ import type { Timeline as TimelineType } from "@/types/timeline";
 import { TimelineV2 } from "@/components/timeline/TimelineV2";
 import { PreviewPlayerV2 } from "@/components/timeline/PreviewPlayerV2";
 import { BlockEditorPanel } from "@/components/editors/BlockEditorPanel";
+import { UploadProgressIndicator } from "@/components/upload/UploadProgressIndicator";
 import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calculateStoryboardDuration, addMusicToTimeline } from "@/lib/timelineConverter";
 import { useErrorToast } from "@/hooks/use-error-toast";
 import { generateStoryboard } from "@/services/storyboardService";
@@ -743,14 +744,10 @@ export default function Home() {
                 )}
 
                 {/* Upload progress indicator */}
-                {uploadingVideosCount > 0 && (
-                  <div className="flex items-center gap-2 p-3 border rounded-lg bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full shrink-0"></div>
-                    <p className="text-sm text-blue-900 dark:text-blue-100">
-                      Processing {totalVideosToUpload - uploadingVideosCount} of {totalVideosToUpload} video{totalVideosToUpload > 1 ? 's' : ''}...
-                    </p>
-                  </div>
-                )}
+                <UploadProgressIndicator
+                  current={uploadingVideosCount}
+                  total={totalVideosToUpload}
+                />
 
                 {/* Upload drop zone */}
                 <div className="relative">
