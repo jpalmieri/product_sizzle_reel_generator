@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { StoryboardResponse } from "@/types/storyboard";
 import type { StillImageResponse } from "@/types/still-image";
-import type { VideoAnalysisResponse, UploadedVideo } from "@/types/video-analysis";
 import type { VideoGenerationResponse } from "@/types/video-generation";
 import type { NarrationGenerationResponse } from "@/types/narration";
 import type { MusicGenerationResponse, MusicDuckingSettings } from "@/types/music";
@@ -21,8 +20,9 @@ import { ExportSection } from "@/components/export/ExportSection";
 import { storyboardToTimeline, updateNarrationDuration, updateClipPosition, calculateStoryboardDuration, addMusicToTimeline } from "@/lib/timelineConverter";
 import { useErrorToast } from "@/hooks/use-error-toast";
 import { useExportSizzleReel } from "@/hooks/useExportSizzleReel";
+import { useVideoManagement } from "@/hooks/useVideoManagement";
 import { generateStoryboard } from "@/services/storyboardService";
-import { analyzeVideo, extractClip } from "@/services/videoService";
+import { extractClip } from "@/services/videoService";
 import { generateStillImage, generateVideo } from "@/services/mediaService";
 import { generateNarration, generateMusic } from "@/services/audioService";
 
@@ -30,16 +30,6 @@ export default function Home() {
   const { showError } = useErrorToast();
   const [productDescription, setProductDescription] = useState("");
   const [baseImage, setBaseImage] = useState<string | null>(null);
-  const [videoFiles, setVideoFiles] = useState<UploadedVideo[]>([]);
-  const [videoAnalyses, setVideoAnalyses] = useState<Record<string, VideoAnalysisResponse>>({});
-  const [analyzingVideos, setAnalyzingVideos] = useState(false);
-  const [currentAnalyzingVideo, setCurrentAnalyzingVideo] = useState<{ current: number; total: number; filename: string } | null>(null);
-  const [compressingVideos, setCompressingVideos] = useState<Record<string, boolean>>({});
-  const [uploadingVideosCount, setUploadingVideosCount] = useState(0);
-  const [totalVideosToUpload, setTotalVideosToUpload] = useState(0);
-  const [previewingVideo, setPreviewingVideo] = useState<UploadedVideo | null>(null);
-  const [deleteWarningOpen, setDeleteWarningOpen] = useState(false);
-  const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
   const [storyboard, setStoryboard] = useState<StoryboardResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -81,6 +71,35 @@ export default function Home() {
     musicDuckingSettings,
   });
 
+  // Video management hook
+  const {
+    videoFiles,
+    analyzingVideos,
+    currentAnalyzingVideo,
+    compressingVideos,
+    uploadingVideosCount,
+    totalVideosToUpload,
+    previewingVideo,
+    deleteWarningOpen,
+    videoToDelete,
+    setVideoToDelete,
+    handleVideoUpload,
+    handleDeleteVideo,
+    confirmDeleteVideo,
+    setPreviewingVideo,
+    setDeleteWarningOpen,
+    analyzeVideosIfNeeded,
+  } = useVideoManagement({
+    onStoryboardClear: () => {
+      setStoryboard(null);
+      setTimeline(null);
+      setGeneratedImages({});
+      setGeneratedVideos({});
+      setGeneratedNarration({});
+      setGeneratedMusic(null);
+    },
+  });
+
   // Create shots lookup for timeline components
   const shotsLookup = storyboard?.shots.reduce((acc, shot) => {
     acc[shot.id] = shot;
@@ -111,144 +130,6 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    // Set total count for progress tracking
-    setTotalVideosToUpload(files.length);
-    setUploadingVideosCount(0);
-
-    // Process each file
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      // Validate file type
-      if (!file.type.startsWith('video/')) {
-        showError(`${file.name} is not a valid video file`);
-        continue;
-      }
-
-      // Generate unique ID for this video
-      const videoId = `video-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      // Increment uploading count
-      setUploadingVideosCount(prev => prev + 1);
-
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const result = e.target?.result as string;
-
-        // Check if compression is needed (over 10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-        let compressedData = result;
-
-        if (file.size > maxSize) {
-          // Compress for analysis
-          setCompressingVideos(prev => ({ ...prev, [videoId]: true }));
-          try {
-            const response = await fetch("/api/video/compress", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                videoData: result,
-                targetSizeMB: 9, // Stay under 10MB limit
-              }),
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || "Failed to compress video");
-            }
-
-            const compressionResult = await response.json();
-            compressedData = compressionResult.compressedVideo;
-
-            console.log(`${file.name} compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressionResult.compressedSize / 1024 / 1024).toFixed(2)}MB (${(compressionResult.compressionRatio * 100).toFixed(0)}%)`);
-          } catch (err) {
-            showError(`Failed to compress ${file.name}: ${err instanceof Error ? err.message : String(err)}`);
-            setCompressingVideos(prev => {
-              const updated = { ...prev };
-              delete updated[videoId];
-              return updated;
-            });
-            // Decrement uploading count on failure
-            setUploadingVideosCount(prev => Math.max(0, prev - 1));
-            return;
-          } finally {
-            setCompressingVideos(prev => {
-              const updated = { ...prev };
-              delete updated[videoId];
-              return updated;
-            });
-          }
-        }
-
-        // Add video to array
-        const uploadedVideo: UploadedVideo = {
-          id: videoId,
-          filename: file.name,
-          originalData: result,
-          compressedData,
-          mimeType: file.type,
-        };
-
-        setVideoFiles(prev => [...prev, uploadedVideo]);
-
-        // Decrement uploading count when done
-        setUploadingVideosCount(prev => Math.max(0, prev - 1));
-      };
-      reader.readAsDataURL(file);
-    }
-
-    // Clear the input so the same file can be uploaded again if deleted
-    event.target.value = '';
-  };
-
-  const handleDeleteVideo = (videoId: string) => {
-    // If storyboard exists, show warning dialog
-    if (storyboard) {
-      setVideoToDelete(videoId);
-      setDeleteWarningOpen(true);
-      return;
-    }
-
-    // Otherwise delete immediately
-    confirmDeleteVideo(videoId);
-  };
-
-  const confirmDeleteVideo = (videoId: string) => {
-    setVideoFiles(prev => prev.filter(v => v.id !== videoId));
-    setVideoAnalyses(prev => {
-      const updated = { ...prev };
-      delete updated[videoId];
-      return updated;
-    });
-
-    // Clear storyboard if it references the deleted video
-    if (storyboard) {
-      const hasDeletedVideoReference = storyboard.shots.some(
-        shot => shot.shotType === 'ui' && shot.videoId === videoId
-      );
-
-      if (hasDeletedVideoReference) {
-        setStoryboard(null);
-        setTimeline(null);
-        setGeneratedImages({});
-        setGeneratedVideos({});
-        setGeneratedNarration({});
-        setGeneratedMusic(null);
-      }
-    }
-
-    // Close dialog
-    setDeleteWarningOpen(false);
-    setVideoToDelete(null);
-  };
-
   const handleGenerateStoryboard = async () => {
     if (!productDescription.trim()) {
       showError("Please enter a product description");
@@ -277,50 +158,7 @@ export default function Home() {
 
     try {
       // Auto-analyze all videos that haven't been analyzed yet
-      const analysisResults: VideoAnalysisResponse[] = [];
-
-      // Calculate how many videos need analysis
-      const videosToAnalyze = videoFiles.filter(v => !videoAnalyses[v.id]);
-      const totalToAnalyze = videosToAnalyze.length;
-      let currentIndex = 0;
-
-      if (totalToAnalyze > 0) {
-        setAnalyzingVideos(true);
-      }
-
-      for (const video of videoFiles) {
-        // Check if we already have analysis for this video
-        if (videoAnalyses[video.id]) {
-          analysisResults.push(videoAnalyses[video.id]);
-          continue;
-        }
-
-        // Update progress
-        currentIndex++;
-        setCurrentAnalyzingVideo({
-          current: currentIndex,
-          total: totalToAnalyze,
-          filename: video.filename
-        });
-
-        // Analyze this video
-        try {
-          const analysis = await analyzeVideo(
-            video.compressedData,
-            video.mimeType,
-            video.id
-          );
-          analysisResults.push(analysis);
-
-          // Store analysis
-          setVideoAnalyses(prev => ({ ...prev, [video.id]: analysis }));
-        } catch (err) {
-          throw new Error(`Video analysis failed for ${video.filename}: ${err instanceof Error ? err.message : "Unknown error"}`);
-        }
-      }
-
-      setAnalyzingVideos(false);
-      setCurrentAnalyzingVideo(null);
+      const analysisResults = await analyzeVideosIfNeeded();
 
       const result = await generateStoryboard(
         productDescription,
@@ -371,8 +209,6 @@ export default function Home() {
       showError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
-      setAnalyzingVideos(false);
-      setCurrentAnalyzingVideo(null);
     }
   };
 
@@ -614,7 +450,7 @@ export default function Home() {
               totalVideosToUpload={totalVideosToUpload}
               onVideoUpload={handleVideoUpload}
               onPreviewVideo={setPreviewingVideo}
-              onDeleteVideo={handleDeleteVideo}
+              onDeleteVideo={(videoId) => handleDeleteVideo(videoId, !!storyboard)}
               disabled={loading}
             />
 
